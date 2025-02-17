@@ -1,43 +1,69 @@
-import * as AWS from "aws-sdk";
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from "@aws-sdk/client-secrets-manager";
+
+import {
+  SSMClient,
+  PutParameterCommand,
+  GetParameterCommand,
+} from "@aws-sdk/client-ssm";
 
 import {
   Connection,
   Keypair,
-  sendAndConfirmTransaction,
   PublicKey,
   VersionedTransaction,
 } from "@solana/web3.js";
+
+import bs58 from "bs58";
 
 import { getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 //const WSOL_MINT = "So11111111111111111111111111111111111111112";
-const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
-// we are just going to blow up if these are not set
-const JUPITER_API_URL = process.env.JUPITER_API_URL || "";
-const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "";
-const PARAMETER_TRADE_STATE = process.env.PARAMETER_TRADE_STATE || "";
-const SECRET_WALLET_PK = process.env.SECRET_WALLET_PK || "";
-const TIMEFRAME = process.env.TIMEFRAME || "";
+const ssm = new SSMClient({});
+const secretsManager = new SecretsManagerClient({});
 
-const ssm = new AWS.SSM();
-const secretsManager = new AWS.SecretsManager();
-const connection = new Connection(SOLANA_RPC_URL, "confirmed");
-
+let solanaConnection: Connection | null = null;
 let wallet: Keypair | null = null;
+
+// facilitate access to environment variables and supports testing
+const getEnvVars = () => ({
+  JUPITER_API_URL: process.env.JUPITER_API_URL || "",
+  SOLANA_RPC_URL: process.env.SOLANA_RPC_URL || "",
+  PARAMETER_TRADE_STATE: process.env.PARAMETER_TRADE_STATE || "",
+  SECRET_WALLET_PK: process.env.SECRET_WALLET_PK || "",
+  TIMEFRAME: process.env.TIMEFRAME || "",
+});
+
+const getSolanaConnection = () => {
+  if (solanaConnection) return solanaConnection;
+
+  const { SOLANA_RPC_URL } = getEnvVars();
+
+  solanaConnection = new Connection(SOLANA_RPC_URL, "confirmed");
+  return solanaConnection;
+};
 
 const getWallet = async () => {
   if (wallet) return wallet;
+
+  const { SECRET_WALLET_PK } = getEnvVars();
+
   try {
-    const secret = await secretsManager
-      .getSecretValue({ SecretId: SECRET_WALLET_PK })
-      .promise();
+    const secret = await secretsManager.send(
+      new GetSecretValueCommand({
+        SecretId: SECRET_WALLET_PK,
+        VersionStage: "AWSCURRENT",
+      })
+    );
+
     if (secret.SecretString) {
-      const parsedSecret = JSON.parse(secret.SecretString);
-      wallet = Keypair.fromSecretKey(
-        new Uint8Array(JSON.parse(parsedSecret.wallet_private_key))
-      );
+      const parsedSecret = bs58.decode(secret.SecretString);
+      wallet = Keypair.fromSecretKey(parsedSecret);
       return wallet;
     }
     throw new Error("Secret string is undefined");
@@ -48,25 +74,31 @@ const getWallet = async () => {
 };
 
 const updateState = async (state: string) => {
-  await ssm
-    .putParameter({
+  const { PARAMETER_TRADE_STATE } = getEnvVars();
+
+  const response = await ssm.send(
+    new PutParameterCommand({
       Name: PARAMETER_TRADE_STATE,
       Value: state,
       Type: "String",
       Overwrite: true,
     })
-    .promise();
+  );
 };
 
 const getState = async () => {
+  const { PARAMETER_TRADE_STATE } = getEnvVars();
   try {
-    const result = await ssm
-      .getParameter({ Name: PARAMETER_TRADE_STATE })
-      .promise();
-    return result.Parameter?.Value || "NONE";
+    const response = await ssm.send(
+      new GetParameterCommand({
+        Name: PARAMETER_TRADE_STATE,
+      })
+    );
+
+    return response.Parameter?.Value || "NONE";
   } catch (error) {
     console.error("Error retrieving state:", error);
-    return "NONE";
+    throw new Error("Failed to retrieve state.");
   }
 };
 
@@ -78,20 +110,21 @@ const getTokenBalance = async (mintAddress: string) => {
       new PublicKey(mintAddress),
       wallet.publicKey
     );
-    const accountInfo = await getAccount(connection, tokenAccount);
+    const accountInfo = await getAccount(getSolanaConnection(), tokenAccount);
     return Number(accountInfo.amount);
   } catch (error) {
     console.error(`Error fetching balance for ${mintAddress}:`, error);
-    return 0;
+    throw error;
   }
 };
 
 // Check best swap route for given amount
 // Future, add wSOL support
-const getBestSwapRoute = async (amount: number) => {
+const getBestSwapRoute = async () => {
+  const { JUPITER_API_URL } = getEnvVars();
   try {
     const solQuote = await fetch(
-      `${JUPITER_API_URL}/quote?inputMint=${SOL_MINT}&outputMint=${USDC_MINT}&amount=${amount}`
+      `${JUPITER_API_URL}/swap/v1/quote?inputMint=${SOL_MINT}&outputMint=${USDC_MINT}&amount=100000000&slippageBps=50&restrictIntermediateTokens=true`
     );
     const solData = await solQuote.json();
 
@@ -105,7 +138,7 @@ const getBestSwapRoute = async (amount: number) => {
     return solData;
   } catch (error) {
     console.error("Error fetching best swap route:", error);
-    return SOL_MINT; // Default to SOL if error occurs
+    throw new Error("Failed to fetch best swap route");
   }
 };
 
@@ -114,6 +147,7 @@ const executeTrade = async (
   outputMint: string,
   amount: number
 ) => {
+  const { JUPITER_API_URL } = getEnvVars();
   try {
     const wallet = await getWallet();
 
@@ -148,11 +182,14 @@ const executeTrade = async (
     transaction.sign([wallet]);
 
     const rawTransaction = transaction.serialize();
-    const txid = await connection.sendRawTransaction(rawTransaction, {
-      skipPreflight: true,
-      maxRetries: 3,
-    });
-    await connection.confirmTransaction(txid);
+    const txid = await getSolanaConnection().sendRawTransaction(
+      rawTransaction,
+      {
+        skipPreflight: true,
+        maxRetries: 3,
+      }
+    );
+    await getSolanaConnection().confirmTransaction(txid);
 
     return { quote, txid };
   } catch (error) {
@@ -163,37 +200,12 @@ const executeTrade = async (
 
 // Entry point for Lambda function
 export const handler = async (event: any) => {
+  const { TIMEFRAME } = getEnvVars();
+
   try {
-    // Validate environment variables
-    if (!PARAMETER_TRADE_STATE) {
-      console.error("Error: Invalid request - trading state not found");
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          message: "Invalid request: trading state not found",
-        }),
-      };
-    }
-
-    if (!SECRET_WALLET_PK) {
-      console.error("Error: Invalid request - wallet private key not found");
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          message: "Invalid request: wallet private key not found",
-        }),
-      };
-    }
-
-    if (!event.body) {
-      console.error("Error: Invalid request - No body found in event");
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          message: "Invalid request: No body found",
-        }),
-      };
-    }
+    //validate environment variables and event body
+    const validationResult = validateEnvironment(event);
+    if (validationResult) return validationResult;
 
     // validate access to state and wallet
     await getWallet();
@@ -205,10 +217,9 @@ export const handler = async (event: any) => {
     console.log("Received TradingView alert:", alert);
 
     // Validate alert, model isn't used at this point
-    const { _, time, action, asset } = alert;
+    const { time, action, asset } = alert;
 
-    //note: model is not used at this point
-    if (/*!model ||*/ !time || !action || !asset) {
+    if (!time || !action || !asset) {
       console.error("Error: Invalid alert - Missing required fields");
       return {
         statusCode: 400,
@@ -234,14 +245,11 @@ export const handler = async (event: any) => {
 
     // make sure this is SOL and not some other asset we are trading
     if (asset !== "SOL") {
-      console.error(
-        "Error: Unsupported asset: Only SOL is supported, received",
-        asset
-      );
+      console.error("Error: Unsupported asset - Only SOL is supported", asset);
       return {
         statusCode: 400,
         body: JSON.stringify({
-          message: "Unsupported asset: Only SOL is supported",
+          message: "Error: Unsupported asset - Only SOL is supported",
         }),
       };
     }
@@ -259,20 +267,35 @@ export const handler = async (event: any) => {
     let trade;
     // Fetch best route dynamically
     // Idea is to be able to handle SOL or wSOL, but right now only SOL is supported
-    const bestMint = await getBestSwapRoute(1);
+    const bestMint = await getBestSwapRoute();
+    console.log("Best swap route:", bestMint);
 
     if (action === "BUY" && lastState === "SELL") {
       const usdcBalance = await getTokenBalance(USDC_MINT);
       if (usdcBalance > 0) {
         trade = await executeTrade(USDC_MINT, bestMint, usdcBalance);
         await updateState("BUY");
+      } else {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({
+            message: "Insufficient USDC.",
+          }),
+        };
       }
     } else if (action === "SELL" && lastState === "BUY") {
       const solBalance = await getTokenBalance(bestMint);
       const amountToSell = solBalance / 2; // Sell half of bestMint (either SOL or wSOL)
-      if (amountToSell > 0) {
+      if (amountToSell > 0.1) {
         trade = await executeTrade(bestMint, USDC_MINT, amountToSell);
         await updateState("SELL");
+      } else {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({
+            message: "Insufficient SOL.",
+          }),
+        };
       }
     }
 
@@ -287,4 +310,53 @@ export const handler = async (event: any) => {
       body: JSON.stringify({ message: "Internal server error" }),
     };
   }
+};
+
+/********************************************************************************
+ * Validate environment variables and event body
+ ********************************************************************************/
+const validateEnvironment = (event: any) => {
+  const { PARAMETER_TRADE_STATE, SECRET_WALLET_PK, TIMEFRAME } = getEnvVars();
+  // Validate environment variables
+  if (!PARAMETER_TRADE_STATE) {
+    console.error("Error: Invalid request - trading state not found");
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        message: "Invalid request: trading state not found",
+      }),
+    };
+  }
+
+  if (!SECRET_WALLET_PK) {
+    console.error("Error: Invalid request - wallet private key not found");
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        message: "Invalid request: wallet private key not found",
+      }),
+    };
+  }
+
+  if (!TIMEFRAME) {
+    console.error("Error: Invalid request - timeframe not found");
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        message: "Invalid request: timeframe not found",
+      }),
+    };
+  }
+
+  if (!event.body) {
+    console.error("Error: Invalid request - No body found in event");
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        message: "Invalid request: No body found",
+      }),
+    };
+  }
+
+  return null;
 };
