@@ -5,7 +5,7 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
-import { handler } from "../../src/lambda/SolTradingView";
+import { handler } from "../../src/lambda/soltv";
 import { clearTestEnvironment, setTestEnvironment } from "../setup/jest.setup";
 
 // Mock AWS clients

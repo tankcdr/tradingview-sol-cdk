@@ -5,7 +5,7 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
-import { handler } from "../../src/lambda/SolTradingView";
+import { handler } from "../../src/lambda/soltv";
 
 // Mock AWS clients
 const ssmMock = mockClient(SSMClient);

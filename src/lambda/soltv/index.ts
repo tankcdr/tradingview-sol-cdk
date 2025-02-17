@@ -13,7 +13,6 @@ import {
   Connection,
   Keypair,
   PublicKey,
-  TokenAmount,
   VersionedTransaction,
 } from "@solana/web3.js";
 
@@ -109,12 +108,15 @@ const getSolanaBalance = async () => {
     const wallet = await getWallet();
 
     const balance = await getSolanaConnection().getBalance(wallet.publicKey);
-    const result = balance; // 1_000_000_000; we don't need a user friendly view
+    const result = balance;
     console.log("Solana balance:", result);
 
     return result;
   } catch (error) {
-    console.error(`Error fetching balance for ${wallet?.publicKey}:`, error);
+    console.error(
+      `Error fetching balance for ${wallet?.publicKey}: and error: `,
+      error
+    );
     throw error;
   }
 };
@@ -177,6 +179,7 @@ const executeTrade = async (
     const response = await fetch(
       `${JUPITER_API_URL}/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50&restrictIntermediateTokens=true`
     );
+
     const quote = await response.json();
     console.log("Trade Quote:", quote);
 
@@ -216,7 +219,7 @@ const executeTrade = async (
     );
     const confirmation = await getSolanaConnection().confirmTransaction(
       txid,
-      "finalized"
+      "confirmed"
     );
 
     if (confirmation.value.err) {

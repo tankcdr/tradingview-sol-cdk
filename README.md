@@ -35,6 +35,16 @@ npm run test:all
 
 ## CICD with CDK
 
+### Customizing your environment
+
+Edit the lib/config/.env to customize URLs and your IP. The IP is used to filter who can call your endpoint. Your IP plus TradingView's IPs.
+
+```
+PUBLIC_IP=YOUR_IP_HERE
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+JUPITER_API_URL=https://api.jup.ag
+```
+
 ### Bootstrap
 
 ```
@@ -43,11 +53,17 @@ cdk bootstrap aws://{aws account}/{aws region} --qualifier {custom qualifier} --
 
 ### Synth
 
+> [!IMPORTANT]
+> Docker should be running.
+
 ```
 cdk synth --profile {aws profile}
 ```
 
 ### Deploy
+
+> [!IMPORTANT]
+> Docker should be running.
 
 ```
 cdk deploy --all --profile {aws profile}

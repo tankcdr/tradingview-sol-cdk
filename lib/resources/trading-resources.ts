@@ -1,5 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as nodejsLambda from "aws-cdk-lib/aws-lambda-nodejs";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -60,14 +61,14 @@ export class TradingResources {
   }
 
   createLambda(role: iam.Role, layer: lambda.LayerVersion) {
-    return new lambda.Function(
+    return new nodejsLambda.NodejsFunction(
       this.scope,
       `TradingLambda${this.config.timeframe}`,
       {
         runtime: lambda.Runtime.NODEJS_22_X,
-        handler: "index.handler",
-        code: lambda.Code.fromAsset(path.join(__dirname, "../../src/lambda")),
+        handler: "handler",
         role: role,
+        timeout: cdk.Duration.minutes(5),
         environment: {
           TIMEFRAME: this.config.timeframe,
           PARAMETER_TRADE_STATE: this.config.parameterPath,
@@ -77,6 +78,24 @@ export class TradingResources {
         },
         layers: [layer],
         architecture: lambda.Architecture.ARM_64,
+        entry: path.join(
+          __dirname,
+          "..",
+          "..",
+          "src",
+          "lambda",
+          "soltv",
+          "index.ts"
+        ),
+        bundling: {
+          externalModules: [
+            "@aws-sdk/*",
+            "@solana/web3.js",
+            "@solana/spl-token",
+            "bs58",
+          ],
+          format: cdk.aws_lambda_nodejs.OutputFormat.ESM,
+        },
       }
     );
   }

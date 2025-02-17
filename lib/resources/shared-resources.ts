@@ -17,9 +17,12 @@ export class SharedResources {
       child_process.execSync("npm init -y", {
         cwd: path.join(solanaLayerPath, "nodejs"),
       });
-      child_process.execSync("npm install @solana/web3.js @solana/spl-token", {
-        cwd: path.join(solanaLayerPath, "nodejs"),
-      });
+      child_process.execSync(
+        "npm install @solana/web3.js @solana/spl-token bs58",
+        {
+          cwd: path.join(solanaLayerPath, "nodejs"),
+        }
+      );
     }
     child_process.execSync(`zip -r ${solanaLayerZip} nodejs`, {
       cwd: solanaLayerPath,

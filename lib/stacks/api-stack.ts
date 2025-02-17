@@ -16,7 +16,7 @@ export class TvSolApiStack extends cdk.Stack {
     // Trading View IP addresses
     // plus my public IP address for testing
     const allowedIPs = [
-      `${customEnv.PUBLIC_IP}/32`,
+      `${customEnv.PUBLIC_IP}`, // Add your public IP address and CIDR here (well in the config)
       "52.89.214.238/32",
       "34.212.75.30/32",
       "54.218.53.128/32",

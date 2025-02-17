@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 // Define environment schema
 const envSchema = z.object({
-  PUBLIC_IP: z.string().ip({ version: "v4" }),
+  PUBLIC_IP: z.string().cidr(),
   SOLANA_RPC_URL: z.string().url(),
   JUPITER_API_URL: z.string().url(),
 });
