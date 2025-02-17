@@ -1,19 +1,39 @@
-# TradingView Solana Trading
+# TradingView Solana Webhook
 
-This is a blank project for CDK development with TypeScript.
+The execution end of a TradingView model. TradingView will send an alert on buy/sell signals. This webhook will execute on the signals swap Solana for USDC and vice versa using Jupiter swap APIs.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+Deployed onto an AWS serverless infrastructure. Right now there are a set of lambdas that handle various alerts and an API gateway. State is managed in parameter store. Might move of DynamoDB in the near future for extended functionality.
 
-## Useful commands
+## Tests
 
-- `npm run build` compile typescript to js
-- `npm run watch` watch for changes and compile
-- `npm run test` perform the jest unit tests
-- `npx cdk deploy` deploy this stack to your default AWS account/region
-- `npx cdk diff` compare deployed stack with current state
-- `npx cdk synth` emits the synthesized CloudFormation template
+### Unit Tests
 
-## CDK
+Leverages mocks to test functionality. Unit tests live in `test/unit`.
+
+```
+npm run test
+```
+
+### Live Tests
+
+> [!CAUTION]
+> These tests, if properly configured, will execute live transactions against your assets.
+
+Configuration of the live tests occurs in directory `test/live`. Copy `env.live.example` to `.env.live` and add appropriate info.
+
+To run the live tests.
+
+```
+npm run test:live
+```
+
+### Run All Tests
+
+```
+npm run test:all
+```
+
+## CICD with CDK
 
 ### Bootstrap
 
