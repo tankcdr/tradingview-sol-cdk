@@ -3,6 +3,9 @@
 *.d.ts
 node_modules
 
+# config
+.env
+
 # build artifacts
 *.zip
 **/solana-layer/

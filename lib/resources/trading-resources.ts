@@ -5,6 +5,7 @@ import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as path from "path";
 import { TradingConfig } from "../types";
+import { customEnv } from "../config/environment";
 
 export class TradingResources {
   constructor(
@@ -30,10 +31,6 @@ export class TradingResources {
       `TradingWalletSecret${this.config.timeframe}`,
       {
         secretName: this.config.secretPath,
-        generateSecretString: {
-          secretStringTemplate: this.config.defaultWalletSecret || "NONE",
-          generateStringKey: "wallet_private_key",
-        },
       }
     );
   }
@@ -73,11 +70,13 @@ export class TradingResources {
         role: role,
         environment: {
           TIMEFRAME: this.config.timeframe,
-          PARAM_NAME: this.config.parameterPath,
-          SECRET_NAME: this.config.secretPath,
-          SOLANA_RPC_URL: "https://api.mainnet-beta.solana.com",
+          PARAMETER_TRADE_STATE: this.config.parameterPath,
+          SECRET_WALLET_PK: this.config.secretPath,
+          SOLANA_RPC_URL: customEnv.SOLANA_RPC_URL,
+          JUPITER_API_URL: customEnv.JUPITER_API_URL,
         },
         layers: [layer],
+        architecture: lambda.Architecture.ARM_64,
       }
     );
   }

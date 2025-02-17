@@ -1,6 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { tradingConfigs } from "../config";
+import { tradingConfigs } from "../config/config";
 import { TradingResources } from "../resources/trading-resources";
 
 export class TvSolTradingStack extends cdk.Stack {

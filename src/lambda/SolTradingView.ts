@@ -11,14 +11,15 @@ import {
 import { getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-const WSOL_MINT = "So11111111111111111111111111111111111111112";
+//const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
-const JUPITER_API_URL = "https://quote-api.jup.ag/v6";
-const SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
-
+// we are just going to blow up if these are not set
+const JUPITER_API_URL = process.env.JUPITER_API_URL || "";
+const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "";
 const PARAMETER_TRADE_STATE = process.env.PARAMETER_TRADE_STATE || "";
 const SECRET_WALLET_PK = process.env.SECRET_WALLET_PK || "";
+const TIMEFRAME = process.env.TIMEFRAME || "";
 
 const ssm = new AWS.SSM();
 const secretsManager = new AWS.SecretsManager();
@@ -194,20 +195,39 @@ export const handler = async (event: any) => {
       };
     }
 
+    // validate access to state and wallet
+    await getWallet();
+    const lastState = await getState();
+    console.log(`Current stored state: ${lastState}`);
+
     // Parse TradingView alert
     const alert = JSON.parse(event.body);
     console.log("Received TradingView alert:", alert);
 
     // Validate alert, model isn't used at this point
-    const { _, action, asset } = alert;
+    const { _, time, action, asset } = alert;
 
     //note: model is not used at this point
-    if (/*!model ||*/ !action || !asset) {
+    if (/*!model ||*/ !time || !action || !asset) {
       console.error("Error: Invalid alert - Missing required fields");
       return {
         statusCode: 400,
         body: JSON.stringify({
           message: "Invalid alert: Missing required fields",
+        }),
+      };
+    }
+
+    // make sure we are trading on the same timeframe
+    if (time !== TIMEFRAME) {
+      console.error(
+        `Error: Timeframe is incorrect: Expect ${TIMEFRAME}, received ${time}`,
+        asset
+      );
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          message: `Error: Timeframe is incorrect: Expect ${TIMEFRAME}, received ${time}`,
         }),
       };
     }
@@ -225,9 +245,6 @@ export const handler = async (event: any) => {
         }),
       };
     }
-
-    const lastState = await getState();
-    console.log(`Current stored state: ${lastState}`);
 
     // it is possible to get the same signal { BUY | SELL } multiple times
     // and we are only interested in trading when the state changes
