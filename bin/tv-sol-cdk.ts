@@ -1,20 +1,32 @@
 #!/opt/homebrew/opt/node/bin/node
-import * as cdk from 'aws-cdk-lib';
-import { TvSolCdkStack } from '../lib/tv-sol-cdk-stack';
+import * as cdk from "aws-cdk-lib";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import { TvSolSharedStack } from "../lib/stacks/shared-stack";
+import { TvSolTradingStack } from "../lib/stacks/trading-stack";
+import { TvSolApiStack } from "../lib/stacks/api-stack";
 
 const app = new cdk.App();
-new TvSolCdkStack(app, 'TvSolCdkStack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+// Create shared resources stack first
+const sharedStack = new TvSolSharedStack(app, "TvSolSharedStack");
 
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
+// Deploy stacks for different timeframes
+const timeframes = ["2h" /*"4h", "15m"*/];
+const tradingStacks: Record<string, TvSolTradingStack> = {};
 
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+timeframes.forEach((timeframe) => {
+  tradingStacks[timeframe] = new TvSolTradingStack(
+    app,
+    `TvSolTradingStack${timeframe}`,
+    timeframe,
+    sharedStack.layer
+  );
 });
+
+// Create API Gateway stack last, with references to all lambdas
+const lambdas: Record<string, lambda.Function> = {};
+Object.entries(tradingStacks).forEach(([timeframe, stack]) => {
+  lambdas[timeframe] = stack.lambda;
+});
+
+new TvSolApiStack(app, "TvSolApiStack", lambdas);
