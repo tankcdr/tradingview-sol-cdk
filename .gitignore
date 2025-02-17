@@ -5,6 +5,7 @@ node_modules
 
 # config
 .env
+.env.live
 
 # build artifacts
 *.zip

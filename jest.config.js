@@ -5,4 +5,6 @@ module.exports = {
   roots: ["<rootDir>/test"],
   testMatch: ["**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json", "node"],
+  // Exclude live tests
+  testPathIgnorePatterns: ["/node_modules/", "/live/"],
 };

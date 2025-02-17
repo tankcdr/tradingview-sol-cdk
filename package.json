@@ -8,6 +8,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
+    "test:live": "jest --config jest.live.config.js",
+    "test:all": "npm run test && npm run test:live",
     "cdk": "cdk"
   },
   "devDependencies": {

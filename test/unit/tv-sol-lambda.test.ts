@@ -1,17 +1,11 @@
-import { setTestEnvironment, clearTestEnvironment } from "./setup/jest.setup";
-
+import { setTestEnvironment, clearTestEnvironment } from "../setup/jest.setup";
 import { mockClient } from "aws-sdk-client-mock";
-
-import {
-  SSMClient,
-  GetParameterCommand,
-  PutParameterCommand,
-} from "@aws-sdk/client-ssm";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
-import { handler } from "../src/lambda/SolTradingView";
+import { handler } from "../../src/lambda/SolTradingView";
 
 // Mock AWS clients
 const ssmMock = mockClient(SSMClient);

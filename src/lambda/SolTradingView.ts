@@ -13,12 +13,14 @@ import {
   Connection,
   Keypair,
   PublicKey,
+  TokenAmount,
   VersionedTransaction,
 } from "@solana/web3.js";
 
 import bs58 from "bs58";
 
 import { getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
+import { get } from "http";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 //const WSOL_MINT = "So11111111111111111111111111111111111111112";
@@ -102,18 +104,38 @@ const getState = async () => {
   }
 };
 
-const getTokenBalance = async (mintAddress: string) => {
+const getSolanaBalance = async () => {
   try {
     const wallet = await getWallet();
 
-    const tokenAccount = await getAssociatedTokenAddress(
-      new PublicKey(mintAddress),
+    const balance = await getSolanaConnection().getBalance(wallet.publicKey);
+    const result = balance; // 1_000_000_000; we don't need a user friendly view
+    console.log("Solana balance:", result);
+
+    return result;
+  } catch (error) {
+    console.error(`Error fetching balance for ${wallet?.publicKey}:`, error);
+    throw error;
+  }
+};
+
+const getUSDCBalance = async () => {
+  try {
+    const wallet = await getWallet();
+    const associatedTokenAddress = await getAssociatedTokenAddress(
+      new PublicKey(USDC_MINT),
       wallet.publicKey
     );
-    const accountInfo = await getAccount(getSolanaConnection(), tokenAccount);
-    return Number(accountInfo.amount);
+
+    const balance = await getSolanaConnection().getTokenAccountBalance(
+      associatedTokenAddress
+    );
+
+    const result = Number(balance.value.amount);
+
+    return result;
   } catch (error) {
-    console.error(`Error fetching balance for ${mintAddress}:`, error);
+    console.error(`Error fetching balance for ${wallet?.publicKey}:`, error);
     throw error;
   }
 };
@@ -151,36 +173,39 @@ const executeTrade = async (
   try {
     const wallet = await getWallet();
 
+    // Get a quote for the trade
     const response = await fetch(
-      `${JUPITER_API_URL}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50`
+      `${JUPITER_API_URL}/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50&restrictIntermediateTokens=true`
     );
     const quote = await response.json();
     console.log("Trade Quote:", quote);
 
     // Create a transaction to swap tokens
-    const { transactionSwap } = await (
-      await fetch(`${JUPITER_API_URL}/swap`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          quote,
-          userPublicKey: wallet.publicKey.toString(),
-          wrapAndUnwrapSol: true,
-        }),
-      })
-    ).json();
-    console.log("Swap transaction: ", transactionSwap);
+    const swapResponse = await await fetch(`${JUPITER_API_URL}/swap/v1/swap`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        quoteResponse: quote,
+        userPublicKey: wallet.publicKey.toString(),
+        wrapAndUnwrapSol: true,
+      }),
+    });
+
+    console.log("Swap response: ", swapResponse);
+    const swap = await swapResponse.json();
+    console.log("Swap transaction: ", swap);
 
     // deserialize the transaction
-    const swapTransactionBuf = Buffer.from(transactionSwap, "base64");
+    const swapTransactionBuf = Buffer.from(swap.swapTransaction, "base64");
     var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
     console.log("Deserialized transaction:", transaction);
 
     // sign the transaction
     transaction.sign([wallet]);
 
+    //send the transaction
     const rawTransaction = transaction.serialize();
     const txid = await getSolanaConnection().sendRawTransaction(
       rawTransaction,
@@ -189,7 +214,19 @@ const executeTrade = async (
         maxRetries: 3,
       }
     );
-    await getSolanaConnection().confirmTransaction(txid);
+    const confirmation = await getSolanaConnection().confirmTransaction(
+      txid,
+      "finalized"
+    );
+
+    if (confirmation.value.err) {
+      throw new Error(
+        `Transaction failed: ${JSON.stringify(
+          confirmation.value.err
+        )}\nhttps://solscan.io/tx/${txid}/`
+      );
+    } else
+      console.log(`Transaction successful: https://solscan.io/tx/${txid}/`);
 
     return { quote, txid };
   } catch (error) {
@@ -267,13 +304,13 @@ export const handler = async (event: any) => {
     let trade;
     // Fetch best route dynamically
     // Idea is to be able to handle SOL or wSOL, but right now only SOL is supported
-    const bestMint = await getBestSwapRoute();
-    console.log("Best swap route:", bestMint);
+    //const bestMint = await getBestSwapRoute();
+    // dconsole.log("Best swap route:", bestMint);
 
     if (action === "BUY" && lastState === "SELL") {
-      const usdcBalance = await getTokenBalance(USDC_MINT);
+      const usdcBalance = await getUSDCBalance();
       if (usdcBalance > 0) {
-        trade = await executeTrade(USDC_MINT, bestMint, usdcBalance);
+        trade = await executeTrade(USDC_MINT, SOL_MINT, usdcBalance);
         await updateState("BUY");
       } else {
         return {
@@ -284,10 +321,12 @@ export const handler = async (event: any) => {
         };
       }
     } else if (action === "SELL" && lastState === "BUY") {
-      const solBalance = await getTokenBalance(bestMint);
-      const amountToSell = solBalance / 2; // Sell half of bestMint (either SOL or wSOL)
-      if (amountToSell > 0.1) {
-        trade = await executeTrade(bestMint, USDC_MINT, amountToSell);
+      const solBalance = await getSolanaBalance();
+      const amountToSwap = Math.floor(solBalance / 2); // Sell half of bestMint (either SOL or wSOL)
+      console.log("Amount to swap:", amountToSwap);
+
+      if (amountToSwap > 100_000_000) {
+        trade = await executeTrade(SOL_MINT, USDC_MINT, amountToSwap);
         await updateState("SELL");
       } else {
         return {
