@@ -217,10 +217,13 @@ const executeTrade = async (
         maxRetries: 3,
       }
     );
-    const confirmation = await getSolanaConnection().confirmTransaction(
-      txid,
-      "confirmed"
-    );
+    const latestBlockHash = await getSolanaConnection().getLatestBlockhash();
+
+    const confirmation = await getSolanaConnection().confirmTransaction({
+      blockhash: latestBlockHash.blockhash,
+      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+      signature: txid,
+    });
 
     if (confirmation.value.err) {
       throw new Error(
