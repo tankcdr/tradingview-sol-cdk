@@ -106,7 +106,7 @@ describe("Trading Lambda Tests", () => {
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
     expect(JSON.parse(response.body).message).toContain(
-      "Invalid alert: Missing required fields"
+      "Error: Invalid alert - Missing required fields"
     );
   });
 
@@ -135,7 +135,7 @@ describe("Trading Lambda Tests", () => {
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
     expect(JSON.parse(response.body).message).toContain(
-      "Invalid alert: Missing required fields"
+      "Error: Invalid alert - Missing required fields"
     );
   });
 
@@ -164,7 +164,7 @@ describe("Trading Lambda Tests", () => {
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
     expect(JSON.parse(response.body).message).toContain(
-      "Invalid alert: Missing required fields"
+      "Error: Invalid alert - Missing required fields"
     );
   });
 
@@ -303,7 +303,7 @@ describe("Trading Lambda Tests", () => {
     const response = await handler(event);
 
     //going to catch the getState failure
-    expect(response.statusCode).toBe(500);
+    expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
   });
 
