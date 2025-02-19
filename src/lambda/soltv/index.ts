@@ -226,13 +226,21 @@ const executeTrade = async (
     });
 
     if (confirmation.value.err) {
-      throw new Error(
-        `Transaction failed: ${JSON.stringify(
-          confirmation.value.err
-        )}\nhttps://solscan.io/tx/${txid}/`
-      );
-    } else
-      console.log(`Transaction successful: https://solscan.io/tx/${txid}/`);
+      //if there is an error, but it is not a timeout error, throw an error
+      if (
+        !confirmation.value.err
+          .toString()
+          .includes("TransactionExpiredTimeoutError")
+      ) {
+        throw new Error(
+          `Transaction failed: ${JSON.stringify(
+            confirmation.value.err
+          )}\nhttps://solscan.io/tx/${txid}/`
+        );
+      }
+    }
+
+    console.log(`Transaction successful: https://solscan.io/tx/${txid}/`);
 
     return { quote, txid };
   } catch (error) {
