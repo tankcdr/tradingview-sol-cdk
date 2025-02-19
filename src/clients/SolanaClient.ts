@@ -56,8 +56,10 @@ export class SolanaClient {
         },
         "confirmed"
       );
+      console.log("Transaction confirmed:", confirmation.value);
 
       if (
+        confirmation.value.err &&
         !confirmation.value.err
           ?.toString()
           .includes("TransactionExpiredTimeoutError")

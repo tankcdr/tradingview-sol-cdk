@@ -57,10 +57,12 @@ describe("Live Trading Tests", () => {
     };
     const response = await handler(event);
 
+    console.error(JSON.parse(response.body).message);
     //going to catch the getState failure
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body).message).toBeTruthy();
-  });
+    console.error(JSON.parse(response.body).message);
+  }, 60000);
 
   it("should execute a trade from USDC to SOL", async () => {
     //encoded version of data/test-account.json
@@ -85,5 +87,5 @@ describe("Live Trading Tests", () => {
     //going to catch the getState failure
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body).message).toBeTruthy();
-  });
+  }, 60000);
 });

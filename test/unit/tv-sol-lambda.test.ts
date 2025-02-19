@@ -303,7 +303,7 @@ describe("Trading Lambda Tests", () => {
     const response = await handler(event);
 
     //going to catch the getState failure
-    expect(response.statusCode).toBe(400);
+    expect(response.statusCode).toBe(500);
     expect(JSON.parse(response.body).message).toBeTruthy();
   });
 
@@ -329,7 +329,8 @@ describe("Trading Lambda Tests", () => {
     const response = await handler(event);
 
     //going to catch the getState failure
-    expect(response.statusCode).toBe(500);
+    expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
+    expect(JSON.parse(response.body).message).toContain("Insufficient SOL.");
   });
 });

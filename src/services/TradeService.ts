@@ -27,8 +27,11 @@ export class TradeService {
         outputMint,
         amount
       );
+      console.log("quote", quote);
       const transaction = await this.jupiterClient.createSwapTransaction(quote);
+      console.log("Transaction created", transaction);
       const txId = await this.solanaClient.sendTransaction(transaction);
+      console.log("txId", txId);
 
       try {
         await this.solanaClient.confirmTransaction(txId);
