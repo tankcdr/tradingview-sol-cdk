@@ -11,6 +11,7 @@ export class SolanaClient {
   private wallet: Keypair;
 
   constructor(rpcUrl: string, wallet: Keypair) {
+    console.log("Creating Solana client with RPC URL:", rpcUrl);
     this.connection = new Connection(rpcUrl, "confirmed");
     this.wallet = wallet;
   }
@@ -77,13 +78,13 @@ export class SolanaClient {
     }
   }
 
-  async sendTransaction(transaction: VersionedTransaction): Promise<string> {
+  async sendTransaction(
+    transaction: VersionedTransaction,
+    p0: { maxRetries: number; skipPreflight: boolean }
+  ): Promise<string> {
     transaction.sign([this.wallet]);
     const rawTransaction = transaction.serialize();
 
-    return await this.connection.sendRawTransaction(rawTransaction, {
-      skipPreflight: true,
-      maxRetries: 3,
-    });
+    return await this.connection.sendRawTransaction(rawTransaction, p0);
   }
 }

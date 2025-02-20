@@ -1,4 +1,4 @@
-import { TokenConfig } from ".";
+import { TokenConfig } from "./index.js";
 
 export const TOKEN_CONFIG: TokenConfig = {
   SOL_MINT: "So11111111111111111111111111111111111111112",

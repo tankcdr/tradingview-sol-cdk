@@ -1,4 +1,3 @@
-import { validateLiveTestEnv } from "../setup/live-test.setup";
 import { mockClient } from "aws-sdk-client-mock";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import {
@@ -6,31 +5,30 @@ import {
   GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
 import { handler } from "../../src/lambda/soltv";
-import { clearTestEnvironment, setTestEnvironment } from "../setup/jest.setup";
+import {
+  clearTestEnvironment,
+  setTestEnvironment,
+} from "../setup/live-test.setup";
 
 // Mock AWS clients
 const ssmMock = mockClient(SSMClient);
 const secretsMock = mockClient(SecretsManagerClient);
 
 describe("Live Trading Tests", () => {
-  let liveEnv: ReturnType<typeof validateLiveTestEnv>;
-
   beforeAll(() => {
     // Skip these tests if running in CI
     if (process.env.CI) {
       console.log("Skipping live tests in CI environment");
       return;
     }
-    liveEnv = validateLiveTestEnv();
   });
 
   beforeEach(() => {
     setTestEnvironment("development");
-    // Skip if no live env
-    if (!liveEnv) {
-      console.log("Skipping: No live test environment");
-      return;
-    }
+    console.log(
+      "after test environment SOLANA_RPC_URL:",
+      process.env.SOLANA_RPC_URL
+    );
   });
 
   afterEach(() => {
@@ -40,7 +38,7 @@ describe("Live Trading Tests", () => {
   it("should execute a trade from SOL to USDC", async () => {
     //encoded version of data/test-account.json
     secretsMock.on(GetSecretValueCommand).resolves({
-      SecretString: liveEnv.LIVE_TEST_WALLET_PK,
+      SecretString: process.env.LIVE_TEST_WALLET_PK,
     });
 
     // validates this works
@@ -62,12 +60,12 @@ describe("Live Trading Tests", () => {
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body).message).toBeTruthy();
     console.error(JSON.parse(response.body).message);
-  }, 60000);
+  }, 180_000);
 
   it("should execute a trade from USDC to SOL", async () => {
     //encoded version of data/test-account.json
     secretsMock.on(GetSecretValueCommand).resolves({
-      SecretString: liveEnv.LIVE_TEST_WALLET_PK,
+      SecretString: process.env.LIVE_TEST_WALLET_PK,
     });
 
     // validates this works
@@ -87,5 +85,5 @@ describe("Live Trading Tests", () => {
     //going to catch the getState failure
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body).message).toBeTruthy();
-  }, 60000);
+  }, 180_000);
 });
