@@ -9,7 +9,7 @@ import {
 } from "@aws-sdk/client-ssm";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
-import { SolanaClient, JupiterClient } from "../../clients";
+import { SolanaClient, JupiterClient } from "@bot";
 import { TradeService } from "../../services";
 import { TOKEN_CONFIG } from "../../config";
 

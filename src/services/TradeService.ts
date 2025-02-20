@@ -1,4 +1,4 @@
-import { JupiterClient, SolanaClient } from "../clients";
+import { JupiterClient, SolanaClient } from "../lib/clients";
 import { TokenConfig } from "../config";
 
 export class TradeService {
