@@ -327,7 +327,7 @@ export const handler = async (event: any) => {
         trade = await executeTrade(USDC_MINT, SOL_MINT, usdcBalance);
         await updateState("BUY");
       } else {
-        console.log("Insufficient USDC.");
+        console.error("Insufficient USDC.");
         return {
           statusCode: 400,
           body: JSON.stringify({
@@ -344,6 +344,7 @@ export const handler = async (event: any) => {
         trade = await executeTrade(SOL_MINT, USDC_MINT, amountToSwap);
         await updateState("SELL");
       } else {
+        console.error("Insufficient SOL.");
         return {
           statusCode: 400,
           body: JSON.stringify({
