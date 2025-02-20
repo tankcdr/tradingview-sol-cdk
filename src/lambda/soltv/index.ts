@@ -18,8 +18,7 @@ import {
 
 import bs58 from "bs58";
 
-import { getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
-import { get } from "http";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 //const WSOL_MINT = "So11111111111111111111111111111111111111112";
