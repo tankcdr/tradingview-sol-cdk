@@ -8,10 +8,10 @@ export const tradingConfigs: Record<string, TradingConfig> = {
     defaultTradingState: "NONE",
     defaultWalletSecret: '{ "key": [] }',
   },
-  "4h": {
-    timeframe: "4h",
-    parameterPath: "/tv/sol/4h/trading-state",
-    secretPath: "/tv/sol/4h/wallet-secret",
+  "3h": {
+    timeframe: "3h",
+    parameterPath: "/tv/sol/3h/trading-state",
+    secretPath: "/tv/sol/3h/wallet-secret",
     defaultTradingState: "NONE",
     defaultWalletSecret: '{ "key": [] }',
   },
