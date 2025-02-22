@@ -221,7 +221,7 @@ const executeTrade = async (
       rawTransaction,
       {
         skipPreflight: true,
-        maxRetries: 3,
+        maxRetries: 5,
       }
     );
     const latestBlockHash = await getSolanaConnection().getLatestBlockhash();
