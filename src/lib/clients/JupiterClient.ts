@@ -28,6 +28,14 @@ export class JupiterClient {
         quoteResponse: quote,
         userPublicKey: this.wallet.publicKey.toString(),
         wrapAndUnwrapSol: true,
+        dynamicComputeUnitLimit: true,
+        dynamicSlippage: true,
+        prioritizationFeeLamports: {
+          priorityLevelWithMaxLamports: {
+            maxLamports: 1000000,
+            priorityLevel: "veryHigh",
+          },
+        },
       }),
     });
 
