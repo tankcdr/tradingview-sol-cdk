@@ -192,6 +192,14 @@ const executeTrade = async (
         quoteResponse: quote,
         userPublicKey: wallet.publicKey.toString(),
         wrapAndUnwrapSol: true,
+        dynamicComputeUnitLimit: true,
+        dynamicSlippage: true,
+        prioritizationFeeLamports: {
+          priorityLevelWithMaxLamports: {
+            maxLamports: 1000000,
+            priorityLevel: "veryHigh",
+          },
+        },
       }),
     });
 
