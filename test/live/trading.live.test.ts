@@ -51,7 +51,7 @@ describe("Live Trading Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd", "action": "SELL", "asset": "SOL","time": "2h" }',
+      body: '{ "model": "tbd", "action": "SELL", "from": "SOL", "to": "USDC", "time": "2h" }',
     };
     const response = await handler(event);
 
@@ -78,7 +78,7 @@ describe("Live Trading Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd", "action": "BUY", "asset": "SOL","time": "2h" }',
+      body: '{ "model": "tbd", "action": "BUY", "from": "USDC", "to": "SOL", "time": "2h" }',
     };
     const response = await handler(event);
 
