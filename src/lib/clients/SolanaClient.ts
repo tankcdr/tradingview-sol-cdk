@@ -1,4 +1,5 @@
 import {
+  Commitment,
   Connection,
   Keypair,
   PublicKey,
@@ -50,35 +51,40 @@ export class SolanaClient {
     }
   }
 
-  async confirmTransaction(signature: string): Promise<boolean> {
+  // Simplified confirmTransaction method using the deprecated but reliable approach
+  async confirmTransaction(
+    signature: string,
+    commitment: Commitment = "confirmed"
+  ): Promise<boolean> {
     try {
-      const latestBlockHash = await this.connection.getLatestBlockhash();
+      console.log(`[SolanaClient] Confirming transaction: ${signature}`);
+
+      // Using the deprecated but reliable confirmTransaction method
+      // @ts-ignore - Using deprecated method intentionally as it works better
       const confirmation = await this.connection.confirmTransaction(
-        {
-          blockhash: latestBlockHash.blockhash,
-          lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-          signature: signature,
-        },
-        "confirmed"
+        signature,
+        commitment
       );
-      console.log("Transaction confirmed:", confirmation.value);
 
+      // Check if the transaction was confirmed successfully
       if (
-        confirmation.value.err &&
-        !confirmation.value.err
-          ?.toString()
-          .includes("TransactionExpiredTimeoutError")
+        confirmation &&
+        confirmation.value &&
+        confirmation.value.err === null
       ) {
-        console.error("Transaction Failed:", confirmation.value.err);
-        throw new Error(
-          `Transaction failed: ${JSON.stringify(confirmation.value.err)}`
+        console.log(`[SolanaClient] Transaction confirmed successfully`);
+        return true;
+      } else {
+        console.warn(
+          `[SolanaClient] Transaction failed to confirm: ${JSON.stringify(
+            confirmation?.value?.err || confirmation
+          )}`
         );
+        return false;
       }
-
-      return true;
     } catch (error) {
-      console.error(`Error confirming transaction ${signature}:`, error);
-      throw error;
+      console.error(`[SolanaClient] Error confirming transaction:`, error);
+      return false;
     }
   }
 
