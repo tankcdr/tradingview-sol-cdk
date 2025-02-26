@@ -1,6 +1,10 @@
 import { setTestEnvironment, clearTestEnvironment } from "../setup/jest.setup";
 import { mockClient } from "aws-sdk-client-mock";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import {
+  SSMClient,
+  GetParameterCommand,
+  PutParameterCommand,
+} from "@aws-sdk/client-ssm";
 import {
   SecretsManagerClient,
   GetSecretValueCommand,
@@ -11,7 +15,7 @@ import { handler } from "../../src/lambda/soltv";
 const ssmMock = mockClient(SSMClient);
 const secretsMock = mockClient(SecretsManagerClient);
 
-describe("Missing Environment Variables", () => {
+describe("Checking Environment Variables", () => {
   beforeEach(() => {
     setTestEnvironment("development");
     ssmMock.reset();
@@ -44,18 +48,11 @@ describe("Missing Environment Variables", () => {
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
   });
-
-  it("should return 400 if body is not included in the event", async () => {
-    const response = await handler({});
-    expect(response.statusCode).toBe(400);
-    expect(JSON.parse(response.body).message).toBeTruthy();
-  });
 });
 
-describe("Trading Lambda Tests", () => {
+describe("Checking AWS Environment", () => {
   beforeEach(() => {
     setTestEnvironment("development");
-    // Reset mocks before each test
     ssmMock.reset();
     secretsMock.reset();
   });
@@ -75,9 +72,62 @@ describe("Trading Lambda Tests", () => {
       body: {},
     };
     const response = await handler(event);
-
     //going to catch the getState failure
     expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body).message).toBeTruthy();
+    expect(
+      JSON.parse(response.body).message.includes("Failed to retrieve state")
+    );
+  });
+
+  it("should update parameter store to SELL", async () => {
+    //encoded version of data/test-account.json
+    secretsMock.on(GetSecretValueCommand).resolves({
+      SecretString:
+        "pmDwu33kYvaJhhEzkqGz7yrgsVgEi7c4QbAZXCzTEeTZ5uyZ5JRgiAmBeTLHP2UjE1DMKb7wAma9xeK6KNfZB4u",
+    });
+
+    // validates this works
+    ssmMock.on(GetParameterCommand).resolves({
+      Parameter: {
+        Name: "/tv/sol/2h/trading-state",
+        Type: "String",
+        Value: "BUY",
+      },
+    });
+
+    const event = {
+      body: '{ "model": "tbd","action": "SELL","from": "SOL", "to": "USDC", "time": "2h" }',
+    };
+    const response = await handler(event);
+
+    // Verify that PutParameterCommand was called with the right arguments
+
+    const putParameterCalls = ssmMock.commandCalls(PutParameterCommand);
+    expect(putParameterCalls).toHaveLength(1); // Ensure it was called once
+    expect(putParameterCalls[0].args[0].input).toEqual({
+      Name: "/tv/sol/2h/trading-state",
+      Value: "SELL",
+      Type: "String",
+      Overwrite: true,
+    });
+  });
+});
+
+describe("Checking Alert Validation", () => {
+  beforeEach(() => {
+    setTestEnvironment("development");
+    ssmMock.reset();
+    secretsMock.reset();
+  });
+
+  afterEach(() => {
+    clearTestEnvironment();
+  });
+
+  it("should return 400 if body is not included in the event", async () => {
+    const response = await handler({});
+    expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
   });
 
@@ -98,7 +148,7 @@ describe("Trading Lambda Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd","action": "BUY","asset": "SOL" }',
+      body: '{ "model": "tbd","action": "BUY","from": "SOL", "to": "USDC" }',
     };
     const response = await handler(event);
 
@@ -110,7 +160,7 @@ describe("Trading Lambda Tests", () => {
     );
   });
 
-  it("should return 400 because asset is missing from event body", async () => {
+  it("should return 400 because to is missing from event body", async () => {
     //encoded version of data/test-account.json
     secretsMock.on(GetSecretValueCommand).resolves({
       SecretString:
@@ -127,7 +177,36 @@ describe("Trading Lambda Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd","action": "BUY","time": "2h" }',
+      body: '{ "model": "tbd","action": "BUY","from": "SOL", "time": "2h" }',
+    };
+    const response = await handler(event);
+
+    //going to catch the getState failure
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body).message).toBeTruthy();
+    expect(JSON.parse(response.body).message).toContain(
+      "Error: Invalid alert - Missing required fields"
+    );
+  });
+
+  it("should return 400 because from is missing from event body", async () => {
+    //encoded version of data/test-account.json
+    secretsMock.on(GetSecretValueCommand).resolves({
+      SecretString:
+        "pmDwu33kYvaJhhEzkqGz7yrgsVgEi7c4QbAZXCzTEeTZ5uyZ5JRgiAmBeTLHP2UjE1DMKb7wAma9xeK6KNfZB4u",
+    });
+
+    // validates this works
+    ssmMock.on(GetParameterCommand).resolves({
+      Parameter: {
+        Name: "/tv/sol/2h/trading-state",
+        Type: "String",
+        Value: "BUY",
+      },
+    });
+
+    const event = {
+      body: '{ "model": "tbd","action": "BUY","to": "SOL", "time": "2h" }',
     };
     const response = await handler(event);
 
@@ -156,9 +235,11 @@ describe("Trading Lambda Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd","asset": "SOL","time": "2h" }',
+      body: '{ "model": "tbd", "from": "SOL", "to": "SOL", "time": "2h" }',
     };
     const response = await handler(event);
+
+    console.error("****************", JSON.parse(response.body).message);
 
     //going to catch the getState failure
     expect(response.statusCode).toBe(400);
@@ -185,7 +266,7 @@ describe("Trading Lambda Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd", "action": "BUY", "asset": "SOL","time": "5m" }',
+      body: '{ "model": "tbd", "action": "BUY", "from": "BTC", "to": "USDC", "time": "5m" }',
     };
     const response = await handler(event);
 
@@ -195,6 +276,19 @@ describe("Trading Lambda Tests", () => {
     expect(JSON.parse(response.body).message).toContain(
       "Error: Timeframe is incorrect: Expect 2h, received 5m"
     );
+  });
+});
+
+describe("Trading Lambda Tests", () => {
+  beforeEach(() => {
+    setTestEnvironment("development");
+    // Reset mocks before each test
+    ssmMock.reset();
+    secretsMock.reset();
+  });
+
+  afterEach(() => {
+    clearTestEnvironment();
   });
 
   it("should return 400 because there is an asset mismatch", async () => {
@@ -214,7 +308,7 @@ describe("Trading Lambda Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd", "action": "BUY", "asset": "BTC","time": "2h" }',
+      body: '{ "model": "tbd", "action": "BUY", "from": "BTC", "to": "USDC", "time": "2h" }',
     };
     const response = await handler(event);
 
@@ -222,7 +316,7 @@ describe("Trading Lambda Tests", () => {
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
     expect(JSON.parse(response.body).message).toContain(
-      "Error: Unsupported asset - Only SOL is supported"
+      "Error: Unsupported trade pair: BTC-USDC"
     );
   });
 
@@ -243,7 +337,7 @@ describe("Trading Lambda Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd", "action": "BUY", "asset": "SOL","time": "2h" }',
+      body: '{ "action": "BUY", "from": "USDC", "to": "SOL", "time": "2h" }',
     };
     const response = await handler(event);
 
@@ -251,11 +345,11 @@ describe("Trading Lambda Tests", () => {
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body).message).toBeTruthy();
     expect(JSON.parse(response.body).message).toContain(
-      "No trade executed, state unchanged"
+      "Trade already executed for this action BUY"
     );
   });
 
-  it("should return 200 and exercise Jupiter API", async () => {
+  it("should return 500 as no token balance", async () => {
     //encoded version of data/test-account.json
     secretsMock.on(GetSecretValueCommand).resolves({
       SecretString:
@@ -267,18 +361,21 @@ describe("Trading Lambda Tests", () => {
       Parameter: {
         Name: "/tv/sol/2h/trading-state",
         Type: "String",
-        Value: "NONE", //prevents a trade
+        Value: "SELL", //prevents a trade
       },
     });
 
     const event = {
-      body: '{ "model": "tbd", "action": "BUY", "asset": "SOL","time": "2h" }',
+      body: '{ "action": "BUY", "from": "USDC", "to": "SOL", "time": "2h" }',
     };
     const response = await handler(event);
 
     //going to catch the getState failure
-    expect(response.statusCode).toBe(200);
+    expect(response.statusCode).toBe(500);
     expect(JSON.parse(response.body).message).toBeTruthy();
+    expect(
+      JSON.parse(response.body).message.includes("could not find account")
+    );
   });
 
   it("should return 500 because this account doesn't have a tokenaccount", async () => {
@@ -298,7 +395,7 @@ describe("Trading Lambda Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd", "action": "BUY", "asset": "SOL","time": "2h" }',
+      body: '{ "action": "BUY", "from": "USDC", "to": "SOL","time": "2h" }',
     };
     const response = await handler(event);
 
@@ -324,13 +421,15 @@ describe("Trading Lambda Tests", () => {
     });
 
     const event = {
-      body: '{ "model": "tbd", "action": "SELL", "asset": "SOL","time": "2h" }',
+      body: '{ "action": "SELL", "from": "SOL", "to": "USDC", "time": "2h" }',
     };
     const response = await handler(event);
 
     //going to catch the getState failure
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body).message).toBeTruthy();
-    expect(JSON.parse(response.body).message).toContain("Insufficient SOL.");
+    expect(JSON.parse(response.body).message).toContain(
+      "Insufficient SOL balance to trade."
+    );
   });
 });

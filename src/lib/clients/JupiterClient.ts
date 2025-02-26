@@ -1,46 +1,84 @@
 import { Keypair, VersionedTransaction } from "@solana/web3.js";
+import { createJupiterApiClient, SwapApi, QuoteResponse } from "@jup-ag/api";
+
+interface QuoteOptions {
+  slippageBps?: number;
+  onlyDirectRoutes?: boolean;
+  excludeDexes?: string[];
+  maxAccounts?: number;
+}
 
 export class JupiterClient {
   private apiUrl: string;
   private wallet: Keypair;
+  private readonly jupiterApi: SwapApi;
 
   constructor(apiUrl: string, wallet: Keypair) {
     this.apiUrl = apiUrl;
     this.wallet = wallet;
+
+    //TODO: add configuration options for devnet, etc
+    this.jupiterApi = createJupiterApiClient();
   }
 
   async getQuote(
     inputMint: string,
     outputMint: string,
-    amount: number
-  ): Promise<any> {
-    const response = await fetch(
-      `${this.apiUrl}/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50&restrictIntermediateTokens=true`
-    );
-    return await response.json();
+    amount: number,
+    options: QuoteOptions = {}
+  ): Promise<QuoteResponse> {
+    try {
+      // Prepare quote parameters
+      const quoteParams = {
+        inputMint,
+        outputMint,
+        amount,
+        slippageBps: options.slippageBps ?? 50, // Default slippage of 0.5% (50 basis points) if not specified
+        onlyDirectRoutes: options.onlyDirectRoutes || false,
+        excludeDexes: options.excludeDexes,
+        maxAccounts: options.maxAccounts,
+      };
+
+      // Get quote from Jupiter API
+      const quote = await this.jupiterApi.quoteGet(quoteParams);
+
+      if (!quote || !quote.routePlan || quote.routePlan.length === 0) {
+        throw new Error(`No routes found for ${inputMint} -> ${outputMint}`);
+      }
+
+      return quote;
+    } catch (error) {
+      console.error("[JupiterClient] Error getting quote:", error);
+      throw error;
+    }
   }
 
-  async createSwapTransaction(quote: any): Promise<VersionedTransaction> {
-    const swapResponse = await fetch(`${this.apiUrl}/swap/v1/swap`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        quoteResponse: quote,
-        userPublicKey: this.wallet.publicKey.toString(),
-        wrapAndUnwrapSol: true,
-        dynamicComputeUnitLimit: true,
-        dynamicSlippage: true,
-        prioritizationFeeLamports: {
-          priorityLevelWithMaxLamports: {
-            maxLamports: 1000000,
-            priorityLevel: "veryHigh",
-          },
+  async createSwapTransaction(
+    quote: QuoteResponse
+  ): Promise<VersionedTransaction> {
+    try {
+      // Get swap transaction
+      const swapResult = await this.jupiterApi.swapPost({
+        swapRequest: {
+          quoteResponse: quote,
+          userPublicKey: this.wallet.publicKey.toBase58(),
+          wrapAndUnwrapSol: true, // Automatically handle SOL wrapping/unwrapping
         },
-      }),
-    });
+      });
 
-    const swap = await swapResponse.json();
-    const swapTransactionBuf = Buffer.from(swap.swapTransaction, "base64");
-    return VersionedTransaction.deserialize(swapTransactionBuf);
+      if (!swapResult.swapTransaction) {
+        throw new Error("No swap transaction returned from Jupiter");
+      }
+
+      // Deserialize the transaction
+      const swapTransaction = VersionedTransaction.deserialize(
+        Buffer.from(swapResult.swapTransaction, "base64")
+      );
+
+      return swapTransaction;
+    } catch (error) {
+      console.error("[JupiterClient] Error creating swap transaction:", error);
+      throw error;
+    }
   }
 }

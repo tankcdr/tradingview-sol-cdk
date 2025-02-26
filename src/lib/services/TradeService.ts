@@ -1,10 +1,12 @@
-import { VersionedTransaction } from "@solana/web3.js";
 import { JupiterClient, SolanaClient } from "@bot/index";
+import { TradePairInterface } from "../config/tokens";
 
 interface TradeResult {
   txId: string;
   quote: any;
   retryCount?: number;
+  inputToken?: string;
+  outputToken?: string;
 }
 
 class TradeError extends Error {
@@ -17,16 +19,16 @@ class TradeError extends Error {
 export class TradeService {
   private solanaClient: SolanaClient;
   private jupiterClient: JupiterClient;
-  private readonly maxRetries: number;
+  private readonly defaultMaxRetries: number;
   private readonly baseRetryDelayMs: number;
 
   constructor(
     solanaClient: SolanaClient,
     jupiterClient: JupiterClient,
-    maxRetries: number = 3,
+    defaultMaxRetries: number = 3,
     baseRetryDelayMs: number = 1000
   ) {
-    this.maxRetries = maxRetries;
+    this.defaultMaxRetries = defaultMaxRetries;
     this.baseRetryDelayMs = baseRetryDelayMs;
     this.solanaClient = solanaClient;
     this.jupiterClient = jupiterClient;
@@ -39,23 +41,46 @@ export class TradeService {
 
   // Execute trade with centralized error handling and retries
   async executeTrade(
-    inputMint: string,
-    outputMint: string,
+    pairConfig: TradePairInterface,
     amount: number,
     retryCount = 0
   ): Promise<TradeResult> {
-    console.log(`[Trade] Starting trade execution (attempt ${retryCount + 1})`);
+    // Use pair config or fall back to defaults
+    const maxRetries = pairConfig?.maxRetries || this.defaultMaxRetries;
+
+    const { inputToken, outputToken } = pairConfig;
+
     console.log(
-      `[Trade] Parameters: inputMint=${inputMint}, outputMint=${outputMint}, amount=${amount}`
+      `[Trade] Starting ${inputToken.SYMBOL}-${
+        outputToken.SYMBOL
+      } trade execution (attempt ${retryCount + 1})`
+    );
+    console.log(
+      `[Trade] Parameters: inputMint=${inputToken.MINT}, outputMint=${outputToken.MINT}, amount=${amount}`
     );
 
     try {
-      // Get quote from Jupiter
+      // Check minimum amount requirements
+      if (pairConfig && amount < pairConfig.minAmountIn) {
+        throw new TradeError(
+          `Amount too small: ${amount} ${inputToken.SYMBOL} (minimum: ${pairConfig.minAmountIn})`,
+          "AMOUNT_TOO_SMALL"
+        );
+      }
+
+      // Get quote from Jupiter with token-specific slippage tolerance
+      const slippageBps = inputToken.SLIPPAGE_TOLERANCE * 100; // Convert to basis points
+
       const quote = await this.jupiterClient.getQuote(
-        inputMint,
-        outputMint,
-        amount
+        inputToken.MINT,
+        outputToken.MINT,
+        amount,
+        {
+          slippageBps,
+          //TODO: add more options for direct routes, etc
+        }
       );
+
       console.log("[Trade] Quote received:", JSON.stringify(quote, null, 2));
 
       // Create swap transaction
@@ -74,7 +99,13 @@ export class TradeService {
 
       if (success) {
         console.log(`[Trade] Success: https://solscan.io/tx/${txId}`);
-        return { txId, quote, retryCount };
+        return {
+          txId,
+          quote,
+          retryCount,
+          inputToken: inputToken.SYMBOL,
+          outputToken: outputToken.SYMBOL,
+        };
       } else {
         throw new TradeError(
           "Transaction failed to confirm",
@@ -102,11 +133,17 @@ export class TradeService {
         errorMessage.includes("timeout")
       ) {
         console.log("[Trade] Timeout - Considering successful");
-        return { txId: "timeout", quote: null, retryCount };
+        return {
+          txId: "timeout",
+          quote: null,
+          retryCount,
+          inputToken: inputToken.SYMBOL,
+          outputToken: outputToken.SYMBOL,
+        };
       }
 
-      // Check if retryable
-      if (this.isRetryableError(error) && retryCount < this.maxRetries) {
+      // Check if retryable and we haven't exceeded max retries for this pair
+      if (this.isRetryableError(error) && retryCount < maxRetries) {
         const delay = this.baseRetryDelayMs * Math.pow(2, retryCount);
         console.log(`[Trade] Retrying in ${delay}ms...`);
 
@@ -115,24 +152,26 @@ export class TradeService {
           console.log(
             "[Trade] Insufficient funds detected - Will retry with a fresh quote"
           );
-          // For insufficient funds, we might want to adjust the amount slightly
-          // This could be a configurable parameter if needed
-          const adjustedAmount = amount * 0.98; // Try with 98% of original amount
+
+          // Use token-specific adjustment factor
+          const adjustmentFactor = inputToken.RETRY_AMOUNT_ADJUSTMENT;
+          const adjustedAmount = amount * adjustmentFactor;
+
           console.log(
-            `[Trade] Adjusting amount from ${amount} to ${adjustedAmount}`
+            `[Trade] Adjusting ${
+              inputToken.SYMBOL
+            } amount from ${amount} to ${adjustedAmount} (${
+              (1 - adjustmentFactor) * 100
+            }% reduction)`
           );
 
           await this.sleep(delay);
-          return this.executeTrade(
-            inputMint,
-            outputMint,
-            adjustedAmount,
-            retryCount + 1
-          );
+          return this.executeTrade(pairConfig, adjustedAmount, retryCount + 1);
         }
 
+        // For other retryable errors, just retry with the same amount
         await this.sleep(delay);
-        return this.executeTrade(inputMint, outputMint, amount, retryCount + 1);
+        return this.executeTrade(pairConfig, amount, retryCount + 1);
       }
 
       throw new TradeError(
@@ -171,7 +210,10 @@ export class TradeService {
     // Check the error message
     if (
       errorMessage.includes("insufficient lamports") ||
-      errorMessage.includes("0x1") // Common error code for insufficient funds
+      errorMessage.includes("0x1") || // Common error code for insufficient funds
+      errorMessage.includes("insufficient") ||
+      errorMessage.includes("Insufficient") ||
+      errorMessage.includes("InsufficientFunds")
     ) {
       return true;
     }
@@ -181,7 +223,8 @@ export class TradeService {
       for (const log of errorLogs) {
         if (
           log.includes("insufficient lamports") ||
-          log.includes("Transfer: insufficient")
+          log.includes("Transfer: insufficient") ||
+          log.includes("Insufficient")
         ) {
           return true;
         }
@@ -209,6 +252,9 @@ export class TradeService {
       "insufficient lamports",
       "custom program error: 0x1", // Add common error code for insufficient funds
       "Transfer: insufficient",
+      "Insufficient",
+      "Price impact exceeds", // For high price impact errors
+      "slippage tolerance exceeded", // For slippage issues
     ];
 
     // Check if any of the retryable error strings are in the error message or code

@@ -1,20 +1,15 @@
 import {
   JupiterClient,
   SolanaClient,
-  TOKEN_CONFIG,
+  TRADE_PAIRS,
   TradeService,
   TradeStateManager,
   WalletManager,
 } from "@bot/index";
 
 export const handler = async (event: any) => {
-  const {
-    JUPITER_API_URL,
-    SOLANA_RPC_URL,
-    PARAMETER_TRADE_STATE,
-    SECRET_WALLET_PK,
-    TIMEFRAME,
-  } = process.env;
+  const { JUPITER_API_URL, SOLANA_RPC_URL, SECRET_WALLET_PK, TIMEFRAME } =
+    process.env;
 
   try {
     // Validate environment and event
@@ -27,23 +22,30 @@ export const handler = async (event: any) => {
 
     // Initialize managers and clients
     const walletManager = new WalletManager(SECRET_WALLET_PK!);
-    const stateManager = new TradeStateManager(PARAMETER_TRADE_STATE!);
     const wallet = await walletManager.getWallet();
+
+    const paramStore = new TradeStateManager(
+      process.env.PARAMETER_TRADE_STATE!
+    );
+    const currentState = await paramStore.getState();
+    console.log("Current state:", currentState);
 
     const solanaClient = new SolanaClient(SOLANA_RPC_URL!, wallet);
     const jupiterClient = new JupiterClient(JUPITER_API_URL!, wallet);
     const tradeService = new TradeService(solanaClient, jupiterClient);
 
-    // Get current state
-    const lastState = await stateManager.getState();
-    console.log(`Current stored state: ${lastState}`);
-
     // Parse and validate alert
     const alert = JSON.parse(event.body);
-    const { time, action, asset } = alert;
+    const { time, action, from, to } = alert;
 
     try {
-      validateAlert({ time, action, asset, expectedTimeframe: TIMEFRAME! });
+      validateAlert({
+        action,
+        time,
+        from,
+        to,
+        expectedTimeframe: TIMEFRAME!,
+      });
     } catch (error) {
       return {
         statusCode: 400,
@@ -51,51 +53,50 @@ export const handler = async (event: any) => {
       };
     }
 
-    // Check if trade is needed
-    if (action === lastState) {
+    // check current state
+    if (currentState === action) {
+      console.log("Trade already executed for this action", action);
       return {
         statusCode: 200,
-        body: JSON.stringify({ message: "No trade executed, state unchanged" }),
+        body: JSON.stringify({
+          message: `Trade already executed for this action ${action}`,
+        }),
+      };
+    } else {
+      await paramStore.updateState(action);
+    }
+
+    // get the trade pair
+    const tradePair = TRADE_PAIRS[`${from}-${to}`];
+
+    //get amount to swap
+    let amountToSwap = 0;
+    if (from === "SOL") {
+      const solBalance = await solanaClient.getSolBalance();
+      amountToSwap = Math.floor(solBalance * tradePair.conversionFactor);
+    } else {
+      const currentBalance = await solanaClient.getTokenBalance(
+        tradePair.inputToken.MINT
+      );
+      amountToSwap = Math.floor(currentBalance * tradePair.conversionFactor);
+    }
+
+    if (amountToSwap < tradePair.minAmountIn) {
+      console.log(
+        `Amount to swap is less than minimum amount in: ${amountToSwap} < ${tradePair.minAmountIn}`
+      );
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          message: `Insufficient ${tradePair.inputToken.SYMBOL} balance to trade.`,
+        }),
       };
     }
 
-    // Execute trade based on action
-    let trade;
-    if (action === "BUY" && lastState === "SELL") {
-      const usdcBalance = await solanaClient.getTokenBalance(
-        TOKEN_CONFIG.USDC_MINT
-      );
-      if (usdcBalance > 0) {
-        trade = await tradeService.executeTrade(
-          TOKEN_CONFIG.USDC_MINT,
-          TOKEN_CONFIG.SOL_MINT,
-          usdcBalance
-        );
-        await stateManager.updateState("BUY");
-      } else {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ message: "Insufficient USDC." }),
-        };
-      }
-    } else if (action === "SELL" && lastState === "BUY") {
-      const solBalance = await solanaClient.getSolBalance();
-      const amountToSwap = Math.floor(solBalance / 2);
+    // Execute trade
+    let trade = await tradeService.executeTrade(tradePair, amountToSwap);
 
-      if (amountToSwap > 100_000) {
-        trade = await tradeService.executeTrade(
-          TOKEN_CONFIG.SOL_MINT,
-          TOKEN_CONFIG.USDC_MINT,
-          amountToSwap
-        );
-        await stateManager.updateState("SELL");
-      } else {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ message: "Insufficient SOL." }),
-        };
-      }
-    }
+    console.log("Trade executed successfully:", trade);
 
     return {
       statusCode: 200,
@@ -105,7 +106,9 @@ export const handler = async (event: any) => {
     console.error("Error processing alert:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Internal server error" }),
+      body: JSON.stringify({
+        message: (error as Error)?.message ?? "Internal server error",
+      }),
     };
   }
 };
@@ -127,18 +130,24 @@ function validateEnvironment({
 }
 
 function validateAlert({
-  time,
   action,
-  asset,
+  time,
+  from,
+  to,
   expectedTimeframe,
 }: {
-  time: string;
   action: string;
-  asset: string;
+  time: string;
+  from: string;
+  to: string;
   expectedTimeframe: string;
 }): boolean {
-  if (!time || !action || !asset) {
+  if (!action || !time || !from || !to) {
     throw new Error("Error: Invalid alert - Missing required fields");
+  }
+
+  if (action !== "BUY" && action !== "SELL") {
+    throw new Error("Error: Invalid action - Must be BUY or SELL");
   }
 
   if (time !== expectedTimeframe) {
@@ -147,8 +156,8 @@ function validateAlert({
     );
   }
 
-  if (asset !== "SOL") {
-    throw new Error("Error: Unsupported asset - Only SOL is supported");
+  if (TRADE_PAIRS[`${from}-${to}`] === undefined) {
+    throw new Error(`Error: Unsupported trade pair: ${from}-${to}`);
   }
 
   return true;
