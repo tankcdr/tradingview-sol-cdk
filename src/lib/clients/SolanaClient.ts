@@ -84,7 +84,7 @@ export class SolanaClient {
       }
     } catch (error) {
       console.error(`[SolanaClient] Error confirming transaction:`, error);
-      return false;
+      throw error;
     }
   }
 
