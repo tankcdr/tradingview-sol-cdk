@@ -16,6 +16,10 @@ export class SolanaClient {
     this.wallet = wallet;
   }
 
+  getConnection(): Connection {
+    return this.connection;
+  }
+
   async getSolBalance(): Promise<number> {
     try {
       return await this.connection.getBalance(this.wallet.publicKey);
