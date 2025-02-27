@@ -9,8 +9,8 @@ node_modules
 
 # build artifacts
 *.zip
-**/solana-layer/
-solana-layer/
+build
+target
 
 
 # CDK asset staging directory

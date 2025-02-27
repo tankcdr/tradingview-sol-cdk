@@ -10,11 +10,13 @@
     "test": "jest",
     "test:live": "jest --config jest.live.config.js",
     "test:all": "npm run test && npm run test:live",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "clean": "rm -rf build cdk.out node_modules target",
+    "clean:all": "rm -rf build cdk.out target"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
-    "@types/node": "22.7.9",
+    "@types/node": "^22.7.9",
     "aws-cdk": "2.178.2",
     "aws-sdk-client-mock": "^4.1.0",
     "bs58": "^6.0.0",
@@ -26,6 +28,7 @@
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.749.0",
     "@aws-sdk/client-ssm": "^3.749.0",
+    "@jup-ag/api": "^6.0.40",
     "@solana/spl-token": "^0.4.12",
     "@solana/spl-token-swap": "^0.4.4",
     "@solana/web3.js": "^1.98.0",

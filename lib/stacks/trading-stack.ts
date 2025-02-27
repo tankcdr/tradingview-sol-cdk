@@ -9,15 +9,16 @@ export class TvSolTradingStack extends cdk.Stack {
   constructor(
     scope: cdk.App,
     id: string,
-    timeframe: string,
-    sharedLayer: lambda.LayerVersion,
+    configIndex: string,
+    resourceLayer: lambda.LayerVersion,
+    libraryLayer: lambda.LayerVersion,
     props?: cdk.StackProps
   ) {
     super(scope, id, props);
 
-    const config = tradingConfigs[timeframe];
+    const config = tradingConfigs[configIndex];
     if (!config) {
-      throw new Error(`No configuration found for timeframe: ${timeframe}`);
+      throw new Error(`No configuration found for timeframe: ${configIndex}`);
     }
 
     const resources = new TradingResources(this, config);
@@ -26,6 +27,6 @@ export class TvSolTradingStack extends cdk.Stack {
     const paramStore = resources.createParameterStore();
     const secret = resources.createSecret();
     const role = resources.createLambdaRole(paramStore, secret);
-    this.lambda = resources.createLambda(role, sharedLayer);
+    this.lambda = resources.createLambda(role, resourceLayer, libraryLayer);
   }
 }
