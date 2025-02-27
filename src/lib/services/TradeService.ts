@@ -21,6 +21,7 @@ export class TradeService {
   private jupiterClient: JupiterClient;
   private readonly defaultMaxRetries: number;
   private readonly baseRetryDelayMs: number;
+  private readonly basePriorityFee: number = 10000; // Base priority fee in micro-lamports per compute unit
 
   constructor(
     solanaClient: SolanaClient,
@@ -77,14 +78,23 @@ export class TradeService {
         amount,
         {
           slippageBps,
-          //TODO: add more options for direct routes, etc
+          onlyDirectRoutes: true,
         }
       );
 
       console.log("[Trade] Quote received:", JSON.stringify(quote, null, 2));
 
+      // Calculate priority fee: doubles with each retry (10,000 → 20,000 → 40,000, etc.)
+      const priorityFee = this.basePriorityFee * Math.pow(2, retryCount);
+      console.log(
+        `[Trade] Using priority fee: ${priorityFee} micro-lamports per compute unit`
+      );
+
       // Create swap transaction
-      const transaction = await this.jupiterClient.createSwapTransaction(quote);
+      const transaction = await this.jupiterClient.createSwapTransaction(
+        quote,
+        priorityFee
+      );
       console.log("[Trade] Swap transaction created");
 
       // Send transaction using SolanaClient (which handles signing)
@@ -155,7 +165,7 @@ export class TradeService {
 
           // Use token-specific adjustment factor
           const adjustmentFactor = inputToken.RETRY_AMOUNT_ADJUSTMENT;
-          const adjustedAmount = amount * adjustmentFactor;
+          const adjustedAmount = Math.floor(amount * adjustmentFactor);
 
           console.log(
             `[Trade] Adjusting ${
@@ -238,6 +248,7 @@ export class TradeService {
   private isRetryableError(error: any): boolean {
     const retryableErrors = [
       "TransactionExpiredBlockheightExceededError",
+      "block height exceeded",
       "BLOCKHEIGHT_EXCEEDED",
       "InstructionError",
       "Network error",
@@ -260,11 +271,12 @@ export class TradeService {
     // Check if any of the retryable error strings are in the error message or code
     const isRetryable = retryableErrors.some(
       (err) =>
+        error.name === err ||
         error.message?.includes(err) ||
         error.code?.includes(err) ||
         (error.name === "TradeError" && error.code === "BLOCKHEIGHT_EXCEEDED")
     );
-
+    console.log("[TradeService] Is retryable:", isRetryable);
     // Also check if it's an insufficient funds error
     return isRetryable || this.isInsufficientFundsError(error);
   }

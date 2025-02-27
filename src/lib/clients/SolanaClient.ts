@@ -59,10 +59,22 @@ export class SolanaClient {
     try {
       console.log(`[SolanaClient] Confirming transaction: ${signature}`);
 
+      const { lastValidBlockHeight, blockhash } =
+        await this.connection.getLatestBlockhash();
+
       // Using the deprecated but reliable confirmTransaction method
       // @ts-ignore - Using deprecated method intentionally as it works better
-      const confirmation = await this.connection.confirmTransaction(
+      /*const confirmation = await this.connection.confirmTransaction(
         signature,
+        commitment
+      );*/
+
+      const confirmation = await this.connection.confirmTransaction(
+        {
+          blockhash,
+          lastValidBlockHeight,
+          signature,
+        },
         commitment
       );
 

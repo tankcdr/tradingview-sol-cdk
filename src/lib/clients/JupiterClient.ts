@@ -54,7 +54,8 @@ export class JupiterClient {
   }
 
   async createSwapTransaction(
-    quote: QuoteResponse
+    quote: QuoteResponse,
+    computeUnitPriceMicroLamports?: number
   ): Promise<VersionedTransaction> {
     try {
       // Get swap transaction
@@ -63,6 +64,7 @@ export class JupiterClient {
           quoteResponse: quote,
           userPublicKey: this.wallet.publicKey.toBase58(),
           wrapAndUnwrapSol: true, // Automatically handle SOL wrapping/unwrapping
+          computeUnitPriceMicroLamports,
         },
       });
 
