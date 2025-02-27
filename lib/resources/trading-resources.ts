@@ -60,7 +60,11 @@ export class TradingResources {
     return role;
   }
 
-  createLambda(role: iam.Role, layer: lambda.LayerVersion) {
+  createLambda(
+    role: iam.Role,
+    layer: lambda.LayerVersion,
+    botLayer: lambda.LayerVersion
+  ) {
     return new nodejsLambda.NodejsFunction(
       this.scope,
       `TradingLambda${this.config.timeframe}`,
@@ -76,7 +80,7 @@ export class TradingResources {
           SOLANA_RPC_URL: customEnv.SOLANA_RPC_URL,
           JUPITER_API_URL: customEnv.JUPITER_API_URL,
         },
-        layers: [layer],
+        layers: [layer, botLayer],
         architecture: lambda.Architecture.ARM_64,
         entry: path.join(
           __dirname,

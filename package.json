@@ -10,7 +10,9 @@
     "test": "jest",
     "test:live": "jest --config jest.live.config.js",
     "test:all": "npm run test && npm run test:live",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "clean": "rm -rf build cdk.out node_modules target",
+    "clean:all": "rm -rf build cdk.out target"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

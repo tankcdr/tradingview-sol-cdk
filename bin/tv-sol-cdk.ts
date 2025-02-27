@@ -19,7 +19,8 @@ timeframes.forEach((timeframe) => {
     app,
     `TvSolTradingStack${timeframe}`,
     timeframe,
-    sharedStack.layer
+    sharedStack.layer,
+    sharedStack.botLayer
   );
 });
 
