@@ -11,14 +11,20 @@ const app = new cdk.App();
 const sharedStack = new TvSolSharedStack(app, "TvSolSharedStack");
 
 // Deploy stacks for different timeframes
-const timeframes = ["2h", "15m"];
+const configs = ["2hsol", "3hsol", "2hray"];
 const tradingStacks: Record<string, TvSolTradingStack> = {};
 
-timeframes.forEach((timeframe) => {
-  tradingStacks[timeframe] = new TvSolTradingStack(
+configs.forEach((config) => {
+  const configName = config.replace(
+    /(\d+[hm])([a-z]+)/,
+    (_, time, name) =>
+      time + name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+  );
+
+  tradingStacks[config] = new TvSolTradingStack(
     app,
-    `TvSolTradingStack${timeframe}`,
-    timeframe,
+    `TvTradingStack${configName}`,
+    config,
     sharedStack.layer,
     sharedStack.botLayer
   );
