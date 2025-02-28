@@ -9,7 +9,7 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
-import { handler } from "../../target/lambda/soltv/index.js";
+import { handler } from "../../src/lambda/soltv/";
 
 // Mock AWS clients
 const ssmMock = mockClient(SSMClient);

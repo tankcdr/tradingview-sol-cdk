@@ -5,7 +5,7 @@ import {
   TradeService,
   TradeStateManager,
   WalletManager,
-} from "@bot/index.js";
+} from "@bot";
 
 export const handler = async (event: any) => {
   const { JUPITER_API_URL, SOLANA_RPC_URL, SECRET_WALLET_PK, TIMEFRAME } =

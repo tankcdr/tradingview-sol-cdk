@@ -62,13 +62,6 @@ export class SolanaClient {
       const { lastValidBlockHeight, blockhash } =
         await this.connection.getLatestBlockhash();
 
-      // Using the deprecated but reliable confirmTransaction method
-      // @ts-ignore - Using deprecated method intentionally as it works better
-      /*const confirmation = await this.connection.confirmTransaction(
-        signature,
-        commitment
-      );*/
-
       const confirmation = await this.connection.confirmTransaction(
         {
           blockhash,
@@ -92,7 +85,9 @@ export class SolanaClient {
             confirmation?.value?.err || confirmation
           )}`
         );
-        return false;
+        throw new Error(
+          JSON.stringify(confirmation?.value?.err || confirmation)
+        );
       }
     } catch (error) {
       console.error(`[SolanaClient] Error confirming transaction:`, error);

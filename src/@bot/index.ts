@@ -1,11 +1,11 @@
-export { SolanaClient, JupiterClient } from "./clients/index.js";
-export { TradeStateManager, WalletManager } from "./managers/index.js";
-export { TradeService } from "./services/index.js";
+export { SolanaClient, JupiterClient } from "./clients/index";
+export { TradeStateManager, WalletManager } from "./managers/index";
+export { TradeService } from "./services/index";
 export {
   TOKENS,
   TRADE_PAIRS,
   getPairConfig,
   getTokenByMint,
   getTokenBySymbol,
-} from "./config/index.js";
-export type { TradePairInterface } from "./config/index.js";
+} from "./config/index";
+export type { TradePairInterface } from "./config/index";

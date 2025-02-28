@@ -20,14 +20,15 @@
     "esModuleInterop": true,
     "strictPropertyInitialization": false,
     "typeRoots": ["./node_modules/@types"],
-    "rootDir": "./src",
+    "rootDir": ".",
+    "baseUrl": ".",
     "outDir": "./target",
     "preserveSymlinks": true,
     "paths": {
-      "@bot/*": ["./src/@bot/*"],
-      "@bot": ["./src/@bot"]
+      "@bot/*": ["src/@bot/*"],
+      "@bot": ["src/@bot"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "cdk.out", "target", "test"]
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "cdk.out", "target"]
 }

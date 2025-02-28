@@ -1,2 +1,2 @@
-export { JupiterClient } from "./JupiterClient.js";
-export { SolanaClient } from "./SolanaClient.js";
+export { JupiterClient } from "./JupiterClient";
+export { SolanaClient } from "./SolanaClient";
