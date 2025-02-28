@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 550">
+  <!-- Background -->
+  <rect width="1000" height="550" fill="#f8f9fa" />
+  
+  <!-- Title -->
+  <text x="500" y="30" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold">TradingView Solana Webhook Architecture</text>
+  
+  <!-- AWS Cloud Box -->
+  <rect x="200" y="60" width="700" height="430" fill="#F2F7FF" stroke="#3F8FD2" stroke-width="2" rx="10" ry="10" />
+  <text x="240" y="85" font-family="Arial" font-size="18" fill="#3F8FD2" font-weight="bold">AWS Cloud</text>
+  
+  <!-- Trading View Box -->
+  <rect x="30" y="180" width="120" height="80" fill="#FF9966" stroke="#E67300" stroke-width="2" rx="5" ry="5" />
+  <text x="90" y="210" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">TradingView</text>
+  <text x="90" y="230" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">Alert Generator</text>
+  
+  <!-- Arrow from TradingView to API Gateway -->
+  <line x1="150" y1="220" x2="250" y2="220" stroke="#555" stroke-width="2" />
+  <polygon points="250,220 240,215 240,225" fill="#555" />
+  <text x="200" y="210" font-family="Arial" font-size="10" text-anchor="middle">HTTP POST</text>
+  
+  <!-- API Gateway -->
+  <rect x="250" y="180" width="120" height="80" fill="#8C4FFF" stroke="#6B24D9" stroke-width="2" rx="5" ry="5" />
+  <text x="310" y="210" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">API Gateway</text>
+  <text x="310" y="230" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">Route53 Custom Domain</text>
+  
+  <!-- Arrow from API Gateway to Lambda -->
+  <line x1="370" y1="220" x2="450" y2="220" stroke="#555" stroke-width="2" />
+  <polygon points="450,220 440,215 440,225" fill="#555" />
+  
+  <!-- Lambda Functions -->
+  <rect x="450" y="100" width="120" height="60" fill="#FF9900" stroke="#E68A00" stroke-width="2" rx="5" ry="5" />
+  <text x="510" y="135" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">λ 2h SOL</text>
+  
+  <rect x="450" y="180" width="120" height="60" fill="#FF9900" stroke="#E68A00" stroke-width="2" rx="5" ry="5" />
+  <text x="510" y="215" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">λ 3h SOL</text>
+  
+  <rect x="450" y="260" width="120" height="60" fill="#FF9900" stroke="#E68A00" stroke-width="2" rx="5" ry="5" />
+  <text x="510" y="295" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">λ 3h RAY</text>
+  
+  <!-- Lambda Layers Box -->
+  <rect x="450" y="340" width="120" height="100" fill="#232F3E" stroke="#000" stroke-width="2" rx="5" ry="5" />
+  <text x="510" y="365" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">Lambda Layers</text>
+  <text x="510" y="385" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">- Solana</text>
+  <text x="510" y="405" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">- Bot</text>
+  <text x="510" y="425" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">- Dependencies</text>
+  
+  <!-- Parameter Store -->
+  <rect x="650" y="160" width="120" height="60" fill="#3CB371" stroke="#2E8B57" stroke-width="2" rx="5" ry="5" />
+  <text x="710" y="190" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">Parameter Store</text>
+  <text x="710" y="210" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">Trading State</text>
+  
+  <!-- Secrets Manager -->
+  <rect x="650" y="240" width="120" height="60" fill="#DC143C" stroke="#B22222" stroke-width="2" rx="5" ry="5" />
+  <text x="710" y="270" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">Secrets Manager</text>
+  <text x="710" y="290" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">Wallet Keys</text>
+  
+  <!-- Arrows from Lambda to AWS Services -->
+  <line x1="570" y1="130" x2="650" y2="170" stroke="#555" stroke-width="2" />
+  <polygon points="650,170 640,165 643,175" fill="#555" />
+  
+  <line x1="570" y1="210" x2="650" y2="190" stroke="#555" stroke-width="2" />
+  <polygon points="650,190 640,185 643,195" fill="#555" />
+  
+  <line x1="570" y1="280" x2="650" y2="270" stroke="#555" stroke-width="2" />
+  <polygon points="650,270 640,265 643,275" fill="#555" />
+  
+  <!-- Solana -->
+  <rect x="850" y="195" width="120" height="80" fill="#04C3FF" stroke="#0095D9" stroke-width="2" rx="5" ry="5" />
+  <text x="910" y="225" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">Solana</text>
+  <text x="910" y="245" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">Blockchain</text>
+  
+  <!-- Arrow from Lambda to Solana -->
+  <line x1="570" y1="210" x2="850" y2="230" stroke="#555" stroke-width="2" stroke-dasharray="5,5" />
+  <polygon points="850,230 840,225 840,235" fill="#555" />
+  <text x="710" y="130" font-family="Arial" font-size="12" text-anchor="middle">Executes trades via Jupiter API</text>
+  
+  <!-- CDK -->
+  <rect x="250" y="410" width="120" height="60" fill="#4B8A38" stroke="#346625" stroke-width="2" rx="5" ry="5" />
+  <text x="310" y="435" font-family="Arial" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">AWS CDK</text>
+  <text x="310" y="455" font-family="Arial" font-size="12" text-anchor="middle" fill="#fff">Infrastructure</text>
+  
+  <!-- Arrow from CDK to all resources -->
+  <path d="M 310 410 Q 400 380 510 370" stroke="#4B8A38" stroke-width="2" stroke-dasharray="5,3" fill="none" />
+  <path d="M 310 410 Q 500 400 710 320" stroke="#4B8A38" stroke-width="2" stroke-dasharray="5,3" fill="none" />
+  <text x="380" y="400" font-family="Arial" font-size="12" text-anchor="middle" fill="#4B8A38">Manages all resources</text>
+  
+  <!-- Legend -->
+  <rect x="790" y="380" width="160" height="110" fill="#fff" stroke="#555" stroke-width="1" rx="5" ry="5" />
+  <text x="870" y="400" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">Legend</text>
+  
+  <!-- Legend Items -->
+  <rect x="800" y="410" width="12" height="12" fill="#FF9966" />
+  <text x="820" y="421" font-family="Arial" font-size="10" text-anchor="start">TradingView</text>
+  
+  <rect x="800" y="430" width="12" height="12" fill="#8C4FFF" />
+  <text x="820" y="441" font-family="Arial" font-size="10" text-anchor="start">API Gateway</text>
+  
+  <rect x="800" y="450" width="12" height="12" fill="#FF9900" />
+  <text x="820" y="461" font-family="Arial" font-size="10" text-anchor="start">Lambda Functions</text>
+  
+  <rect x="800" y="470" width="12" height="12" fill="#3CB371" />
+  <text x="820" y="481" font-family="Arial" font-size="10" text-anchor="start">Parameter Store</text>
+</svg>

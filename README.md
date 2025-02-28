@@ -1,8 +1,32 @@
 # TradingView Solana Webhook
 
-The execution end of a TradingView model. TradingView will send an alert on buy/sell signals. This webhook will execute on the signals swap Solana for USDC and vice versa using Jupiter swap APIs.
+Handles the business end of a TradingView model. Supports swapping assets using the Jupiter API.
 
-Deployed onto an AWS serverless infrastructure. Right now there are a set of lambdas that handle various alerts and an API gateway. State is managed in parameter store. Might move of DynamoDB in the near future for extended functionality.
+## Architecture
+
+TradingView will send an alert to the API endpoint. The alert is based upon the model in use and can vary.
+
+![Architecture Diagram](content/architecture.png)
+
+An API is exposed that support a Trading Pair (say SOLUSDC) and a time interval. In the diagram 2h SOL indicates a handler that support a 2 hour time interval and swaps between SOL and USDC based on the alert (BUY, SELL). The model is beyond the scope of this work.
+
+Lambda's handle the alert and make the trade, provided conditions are met. Lambda's do leverage a TradeService, which subsequently leverages a JupiterClient and SolanaClient to create swap instructions and execute the transaction, respectively. TradeService implements retry logic and manages the flow.
+
+This flow is outlined below.
+
+![General Flow](content/flow.png)
+
+### Message format
+
+The basic message format to construct your own alerts is below:
+
+```
+{"action": "BUY", "time": "3h", "from": "USDC", "to": "RAY" }
+```
+
+In this case, the action BUY indicates that the TradeServices should swap between USDC to RAY. The action is stored to avoid handling multiple BUY signals. The logic there is to ensure a particular action state is only executed once.
+
+The time is used to ensure that the alert has been send to the correct handler (handlers have their own wallets).
 
 ## Quick Start
 
