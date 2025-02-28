@@ -4,6 +4,6 @@ export {
   getPairConfig,
   getTokenByMint,
   getTokenBySymbol,
-} from "./tokens";
+} from "./tokens.js";
 
-export type { TradePairInterface } from "./tokens";
+export type { TradePairInterface } from "./tokens.js";

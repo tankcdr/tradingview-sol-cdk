@@ -1,1 +1,1 @@
-export { TradeService } from "./TradeService";
+export { TradeService } from "./TradeService.js";

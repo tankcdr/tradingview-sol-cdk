@@ -1,15 +1,19 @@
 import * as cdk from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as apigateway from "aws-cdk-lib/aws-apigateway";
-import * as iam from "aws-cdk-lib/aws-iam";
-import path = require("path");
+import * as path from "path";
 import * as fs from "fs";
 import * as child_process from "child_process";
 
 export class SharedResources {
   static createSolanaLayer(scope: cdk.Stack) {
-    const solanaLayerPath = path.join(__dirname, "../../build/solana-layer");
-    const solanaLayerZip = path.join(__dirname, "../../build/solana-layer.zip");
+    const solanaLayerPath = path.join(
+      __dirname,
+      "../../target/layer/solana-layer"
+    );
+    const solanaLayerZip = path.join(
+      __dirname,
+      "../../target/layer/solana-layer.zip"
+    );
 
     if (!fs.existsSync(solanaLayerPath)) {
       fs.mkdirSync(solanaLayerPath, { recursive: true });
@@ -32,41 +36,37 @@ export class SharedResources {
       code: lambda.Code.fromAsset(solanaLayerZip),
       compatibleRuntimes: [lambda.Runtime.NODEJS_22_X],
       description: "Solana dependencies for Lambda",
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      layerVersionName: "deps-layer",
+      compatibleArchitectures: [lambda.Architecture.ARM_64],
     });
   }
 
   static createBotLayer(scope: cdk.Stack) {
-    const baseLayerPath = path.join(__dirname, "../../");
-    const botLayerPath = path.join(__dirname, "../../build/bot-layer");
-    const botLayerZip = path.join(__dirname, "../../build/bot-layer.zip");
-
-    const nodejsPath = path.join(botLayerPath, "nodejs");
-    const nodeModulesPath = path.join(nodejsPath, "node_modules");
-    const botPath = path.join(nodeModulesPath, "@bot");
-
-    if (!fs.existsSync(botLayerPath)) {
-      fs.mkdirSync(botLayerPath, { recursive: true });
-      fs.mkdirSync(nodejsPath);
-      fs.mkdirSync(nodeModulesPath);
-      fs.mkdirSync(botPath);
-    }
-    //ensure the bot layer is build
-    child_process.execSync("npm run build", { cwd: baseLayerPath });
-    //copy built library to the layer
-    child_process.execSync(
-      "cp -r target/lib/* build/bot-layer/nodejs/node_modules/@bot",
-      {
-        cwd: baseLayerPath,
-      }
-    );
-    child_process.execSync(`zip -r ${botLayerZip} nodejs`, {
-      cwd: botLayerPath,
-    });
-
-    return new lambda.LayerVersion(scope, "BotLibLayer", {
-      code: lambda.Code.fromAsset(botLayerZip),
+    const botLayer = new lambda.LayerVersion(scope, "bot-layer-construct", {
       compatibleRuntimes: [lambda.Runtime.NODEJS_22_X],
-      description: "Bot library dependencies for Lambda",
+      description: "BotLayer",
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      code: lambda.Code.fromAsset(path.join(__dirname, "/../../target/@bot"), {
+        bundling: {
+          image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+          user: "root",
+          command: [
+            "bash",
+            "-c",
+            [
+              "mkdir -p /asset-output/nodejs/node_modules/@bot",
+              "npm init -y",
+              "cp package.json /asset-output/nodejs/node_modules/@bot",
+              "cp -r * /asset-output/nodejs/node_modules/@bot/",
+            ].join(" && "),
+          ],
+        },
+      }),
+      layerVersionName: `bot-layer`,
+      compatibleArchitectures: [lambda.Architecture.ARM_64],
     });
+
+    return botLayer;
   }
 }

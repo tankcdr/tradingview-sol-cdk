@@ -4,20 +4,22 @@ import * as nodejsLambda from "aws-cdk-lib/aws-lambda-nodejs";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as path from "path";
 import { TradingConfig } from "../types";
 import { customEnv } from "../config/environment";
+import { Stack } from "aws-cdk-lib";
 
 export class TradingResources {
   constructor(
-    private readonly scope: cdk.Stack,
+    private readonly scope: Stack,
     private readonly config: TradingConfig
   ) {}
 
   createParameterStore() {
     return new ssm.StringParameter(
       this.scope,
-      `TradingStateParam${this.config.timeframe}`,
+      `TradingStateParam${this.config.name}`,
       {
         parameterName: this.config.parameterPath,
         stringValue: this.config.defaultTradingState || "NONE",
@@ -29,7 +31,7 @@ export class TradingResources {
   createSecret() {
     return new secretsmanager.Secret(
       this.scope,
-      `TradingWalletSecret${this.config.timeframe}`,
+      `TradingWalletSecret${this.config.name}`,
       {
         secretName: this.config.secretPath,
       }
@@ -42,7 +44,7 @@ export class TradingResources {
   ) {
     const role = new iam.Role(
       this.scope,
-      `TradingLambdaRole${this.config.timeframe}`,
+      `TradingLambdaRole${this.config.name}`,
       {
         assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
       }
@@ -53,6 +55,15 @@ export class TradingResources {
         "service-role/AWSLambdaBasicExecutionRole"
       )
     );
+
+    // Add explicit permission for GetSecretValue
+    role.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [secret.secretArn],
+      })
+    );
+
     paramStore.grantRead(role);
     paramStore.grantWrite(role);
     secret.grantRead(role);
@@ -65,14 +76,25 @@ export class TradingResources {
     layer: lambda.LayerVersion,
     botLayer: lambda.LayerVersion
   ) {
+    const logGroup = new logs.LogGroup(
+      this.scope,
+      `TradingLambdaLogs${this.config.name}`,
+      {
+        logGroupName: `/aws/lambda/TradingLambda${this.config.name}`,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        retention: logs.RetentionDays.THREE_DAYS,
+      }
+    );
+
     return new nodejsLambda.NodejsFunction(
       this.scope,
-      `TradingLambda${this.config.timeframe}`,
+      `TradingLambda${this.config.name}`,
       {
         runtime: lambda.Runtime.NODEJS_22_X,
         handler: "handler",
-        role: role,
         timeout: cdk.Duration.minutes(5),
+        role,
+        logGroup,
         environment: {
           TIMEFRAME: this.config.timeframe,
           PARAMETER_TRADE_STATE: this.config.parameterPath,
@@ -97,10 +119,10 @@ export class TradingResources {
             "@solana/web3.js",
             "@solana/spl-token",
             "@jup-ag/api",
-            "@bot",
             "bs58",
+            "@bot",
           ],
-          format: cdk.aws_lambda_nodejs.OutputFormat.ESM,
+          format: cdk.aws_lambda_nodejs.OutputFormat.CJS,
         },
       }
     );

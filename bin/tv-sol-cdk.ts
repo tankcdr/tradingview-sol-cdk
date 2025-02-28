@@ -41,5 +41,5 @@ new TvSolApiStack(app, "TvSolApiStack", lambdas, {
   domainName: process.env.DOMAIN_NAME,
   subdomainName: process.env.SUBDOMAIN_NAME,
   hostedZoneId: process.env.HOSTED_ZONE_ID,
-  createCustomDomain: false,
+  createCustomDomain: true,
 });

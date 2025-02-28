@@ -22,10 +22,12 @@
     "typeRoots": ["./node_modules/@types"],
     "rootDir": "./src",
     "outDir": "./target",
+    "preserveSymlinks": true,
     "paths": {
-      "@bot/*": ["./target/src/@bot/*"]
+      "@bot/*": ["./src/@bot/*"],
+      "@bot": ["./src/@bot"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "cdk.out", "target", "build"]
+  "exclude": ["node_modules", "cdk.out", "target", "test"]
 }

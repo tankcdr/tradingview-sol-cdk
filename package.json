@@ -11,8 +11,11 @@
     "test:live": "jest --config jest.live.config.js",
     "test:all": "npm run test && npm run test:live",
     "cdk": "cdk",
-    "clean": "rm -rf build cdk.out target",
-    "clean:all": "rm -rf build cdk.out target node_modules"
+    "clean": "rm -rf  cdk.out target",
+    "clean:all": "rm -rf  cdk.out target node_modules",
+    "synth": "cdk synth --profile ${AWS_DEFAULT_PROFILE}",
+    "deploy": "cdk deploy --all --profile ${AWS_DEFAULT_PROFILE} --require-approval never",
+    "destroy": "cdk destroy --all --profile ${AWS_DEFAULT_PROFILE} --force"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

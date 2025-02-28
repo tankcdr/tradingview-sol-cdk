@@ -1,2 +1,2 @@
-export { TradeStateManager } from "./TradeStateManager";
-export { WalletManager } from "./WalletManager";
+export { TradeStateManager } from "./TradeStateManager.js";
+export { WalletManager } from "./WalletManager.js";

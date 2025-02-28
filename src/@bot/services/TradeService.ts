@@ -1,5 +1,4 @@
-import { JupiterClient, SolanaClient } from "@bot/index";
-import { TradePairInterface } from "../config/tokens";
+import { JupiterClient, SolanaClient, TradePairInterface } from "@bot/index.js";
 
 interface TradeResult {
   txId: string;

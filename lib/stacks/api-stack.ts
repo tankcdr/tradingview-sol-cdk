@@ -3,6 +3,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as route53 from "aws-cdk-lib/aws-route53";
+import * as route53targets from "aws-cdk-lib/aws-route53-targets";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import { customEnv } from "../config/environment";
 
@@ -134,6 +135,30 @@ export class TvSolApiStack extends cdk.Stack {
         "Access-Control-Allow-Origin": "'*'",
       },
     });
+
+    if (
+      createCustomDomain &&
+      hostedZone &&
+      props.domainName &&
+      props.subdomainName
+    ) {
+      const fullDomainName = `${props.subdomainName}.${props.domainName}`;
+
+      // Create an A record that points to the API Gateway
+      new route53.ARecord(this, "ApiGatewayAliasRecord", {
+        zone: hostedZone,
+        recordName: props.subdomainName, // Just the subdomain part ('n')
+        target: route53.RecordTarget.fromAlias(
+          new route53targets.ApiGatewayDomain(api.domainName!)
+        ),
+      });
+
+      // Output the complete URL for reference
+      new cdk.CfnOutput(this, "CustomDomainUrl", {
+        value: `https://${fullDomainName}/`,
+        description: "Custom domain URL for the trading API",
+      });
+    }
 
     // Create base trade resource
     const tradeResource = api.root.addResource("trade");
