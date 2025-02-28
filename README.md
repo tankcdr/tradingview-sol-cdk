@@ -28,6 +28,11 @@ In this case, the action BUY indicates that the TradeServices should swap betwee
 
 The time is used to ensure that the alert has been send to the correct handler (handlers have their own wallets).
 
+### Prerequisites
+
+1. AWS Account
+2. Local AWS environment established
+
 ## Quick Start
 
 1. Install dependencies `npm i`
@@ -113,3 +118,11 @@ cdk synth --profile {aws profile}
 ```
 cdk deploy --all --profile {aws profile} --require-approval never
 ```
+
+## ❤️ Like this Project
+
+Maintaining and improving this project takes time and effort. If you find it useful and would like to support its development, consider sending a donation. Hopefully, your TradingView model is profitable!
+
+### 💸 Donate via Solana (SOL)
+
+Send SOL donations to the following address: EuMmg13a2Vi7LPh64mwkRGsoPtYEUnAkyCwa7oYmsx58
