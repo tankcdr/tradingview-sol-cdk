@@ -11,7 +11,7 @@ const app = new cdk.App();
 const sharedStack = new TvSolSharedStack(app, "TvSolSharedStack");
 
 // Deploy stacks for different timeframes
-const configs = ["2hsol", "3hsol", "2hray"];
+const configs = ["2hsol", "3hsol", "3hray"];
 const tradingStacks: Record<string, TvSolTradingStack> = {};
 
 configs.forEach((config) => {
@@ -36,4 +36,10 @@ Object.entries(tradingStacks).forEach(([timeframe, stack]) => {
   lambdas[timeframe] = stack.lambda;
 });
 
-new TvSolApiStack(app, "TvSolApiStack", lambdas);
+//TODO: make domain optional
+new TvSolApiStack(app, "TvSolApiStack", lambdas, {
+  domainName: process.env.DOMAIN_NAME,
+  subdomainName: process.env.SUBDOMAIN_NAME,
+  hostedZoneId: process.env.HOSTED_ZONE_ID,
+  createCustomDomain: false,
+});

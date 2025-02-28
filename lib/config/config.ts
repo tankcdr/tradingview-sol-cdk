@@ -15,10 +15,10 @@ export const tradingConfigs: Record<string, TradingConfig> = {
     defaultTradingState: "NONE",
     defaultWalletSecret: '{ "key": [] }',
   },
-  "2hray": {
-    timeframe: "2h",
-    parameterPath: "/tv/ray/2h/trading-state",
-    secretPath: "/tv/ray/2h/wallet-secret",
+  "3hray": {
+    timeframe: "3h",
+    parameterPath: "/tv/ray/3h/trading-state",
+    secretPath: "/tv/ray/3h/wallet-secret",
     defaultTradingState: "NONE",
     defaultWalletSecret: '{ "key": [] }',
   },

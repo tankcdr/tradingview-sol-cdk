@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "commonjs",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "lib": ["es2020", "dom"],
     "declaration": true,
     "strict": true,
@@ -19,10 +20,12 @@
     "esModuleInterop": true,
     "strictPropertyInitialization": false,
     "typeRoots": ["./node_modules/@types"],
+    "rootDir": "./src",
     "outDir": "./target",
     "paths": {
-      "@bot/*": ["./src/lib/*"]
+      "@bot/*": ["./target/src/@bot/*"]
     }
   },
-  "exclude": ["node_modules", "cdk.out", "target"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "cdk.out", "target", "build"]
 }

@@ -10,6 +10,9 @@ const envSchema = z.object({
   PUBLIC_IP: z.string().cidr(),
   SOLANA_RPC_URL: z.string().url(),
   JUPITER_API_URL: z.string().url(),
+  DOMAIN_NAME: z.string(),
+  SUBDOMAIN_NAME: z.string().min(1),
+  HOSTED_ZONE_ID: z.string(),
 });
 
 // Parse and validate environment variables

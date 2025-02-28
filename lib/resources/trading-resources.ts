@@ -96,6 +96,8 @@ export class TradingResources {
             "@aws-sdk/*",
             "@solana/web3.js",
             "@solana/spl-token",
+            "@jup-ag/api",
+            "@bot",
             "bs58",
           ],
           format: cdk.aws_lambda_nodejs.OutputFormat.ESM,

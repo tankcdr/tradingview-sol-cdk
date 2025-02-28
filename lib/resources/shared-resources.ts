@@ -18,7 +18,7 @@ export class SharedResources {
         cwd: path.join(solanaLayerPath, "nodejs"),
       });
       child_process.execSync(
-        "npm install @solana/web3.js @solana/spl-token bs58",
+        "npm install @solana/web3.js @solana/spl-token @jup-ag/api bs58",
         {
           cwd: path.join(solanaLayerPath, "nodejs"),
         }
@@ -39,20 +39,26 @@ export class SharedResources {
     const baseLayerPath = path.join(__dirname, "../../");
     const botLayerPath = path.join(__dirname, "../../build/bot-layer");
     const botLayerZip = path.join(__dirname, "../../build/bot-layer.zip");
+
     const nodejsPath = path.join(botLayerPath, "nodejs");
-    const botPath = path.join(nodejsPath, "@bot");
+    const nodeModulesPath = path.join(nodejsPath, "node_modules");
+    const botPath = path.join(nodeModulesPath, "@bot");
 
     if (!fs.existsSync(botLayerPath)) {
       fs.mkdirSync(botLayerPath, { recursive: true });
       fs.mkdirSync(nodejsPath);
+      fs.mkdirSync(nodeModulesPath);
       fs.mkdirSync(botPath);
     }
     //ensure the bot layer is build
     child_process.execSync("npm run build", { cwd: baseLayerPath });
     //copy built library to the layer
-    child_process.execSync("cp -r target/lib/* build/bot-layer/nodejs/@bot", {
-      cwd: baseLayerPath,
-    });
+    child_process.execSync(
+      "cp -r target/lib/* build/bot-layer/nodejs/node_modules/@bot",
+      {
+        cwd: baseLayerPath,
+      }
+    );
     child_process.execSync(`zip -r ${botLayerZip} nodejs`, {
       cwd: botLayerPath,
     });

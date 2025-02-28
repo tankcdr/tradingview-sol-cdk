@@ -48,7 +48,13 @@ JUPITER_API_URL=https://api.jup.ag
 ### Bootstrap
 
 ```
-cdk bootstrap aws://{aws account}/{aws region} --qualifier {custom qualifier} --profile {aws profile}
+cdk bootstrap aws://{aws account}/{aws region} --toolkit-stack-name {custom name} --qualifier {custom qualifier} --profile {aws profile}
+```
+
+Add the custom qualifier to cdk.json
+
+```
+ "@aws-cdk/core:bootstrapQualifier": "tviewhook",
 ```
 
 ### Synth
@@ -66,5 +72,5 @@ cdk synth --profile {aws profile}
 > Docker should be running.
 
 ```
-cdk deploy --all --profile {aws profile}
+cdk deploy --all --profile {aws profile} --require-approval never
 ```

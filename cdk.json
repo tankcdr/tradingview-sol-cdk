@@ -17,8 +17,8 @@
     ]
   },
   "context": {
-    "@aws-cdk/core:bootstrapQualifier": "tvsol",
-    "aws-cdk:toolkitStackName": "TradingView-Sol-Stack",
+    "@aws-cdk/core:bootstrapQualifier": "tviewhook",
+    "aws-cdk:toolkitStackName": "TradingViewWebhookBootstrap",
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/core:target-partitions": [
