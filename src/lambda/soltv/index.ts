@@ -32,7 +32,7 @@ export const handler = async (event: any) => {
 
     const solanaClient = new SolanaClient(SOLANA_RPC_URL!, wallet);
     const jupiterClient = new JupiterClient(JUPITER_API_URL!, wallet);
-    const tradeService = new TradeService(solanaClient, jupiterClient);
+    const tradeService = new TradeService(solanaClient, jupiterClient, 10);
 
     // Parse and validate alert
     const alert = JSON.parse(event.body);

@@ -36,7 +36,7 @@ export const TRADE_PAIRS: { [index: string]: TradePairInterface } = {
     inputToken: TOKENS.SOL,
     outputToken: TOKENS.USDC,
     minAmountIn: 100_000_000, // Minimum SOL amount to trade
-    maxRetries: 3,
+    maxRetries: 5,
     conversionFactor: 0.5,
   },
   "USDC-SOL": {

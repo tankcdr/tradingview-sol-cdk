@@ -98,7 +98,7 @@ export class TradeService {
 
       // Send transaction using SolanaClient (which handles signing)
       const txId = await this.solanaClient.sendTransaction(transaction, {
-        maxRetries: 3,
+        maxRetries: 5,
         skipPreflight: false,
       });
       console.log(`[Trade] Transaction sent: ${txId}`);

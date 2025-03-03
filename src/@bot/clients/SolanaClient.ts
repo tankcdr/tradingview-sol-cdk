@@ -97,11 +97,11 @@ export class SolanaClient {
 
   async sendTransaction(
     transaction: VersionedTransaction,
-    p0: { maxRetries: number; skipPreflight: boolean }
+    txOptions: { maxRetries: number; skipPreflight: boolean }
   ): Promise<string> {
     transaction.sign([this.wallet]);
     const rawTransaction = transaction.serialize();
 
-    return await this.connection.sendRawTransaction(rawTransaction, p0);
+    return await this.connection.sendRawTransaction(rawTransaction, txOptions);
   }
 }
